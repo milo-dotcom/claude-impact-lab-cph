@@ -4,8 +4,11 @@ Run: .venv/bin/streamlit run app.py
 
 Talks to claims.py (issue #8) through the contract in CONCEPT.md, and to evidence.py
 (issue #4) for the sign / car-position photo check. No .env → both run in mock mode.
+Presentation layer is custom HTML/CSS (brand, step tracker, verdict card, letter paper,
+receipt); every dynamic value is html-escaped before it goes into a block.
 """
 
+import html
 import json
 import os
 from pathlib import Path
@@ -24,6 +27,124 @@ PHOTO_TYPES = ["jpg", "jpeg", "png", "webp"]
 MAX_EVIDENCE_PHOTOS = 5
 MODEL_NAME = os.environ.get("PARKREFUND_MODEL", "claude-sonnet-5-5")
 SAMPLE_CASES_PATH = Path(__file__).parent / "data" / "sample_cases.json"
+VERDICT_STYLE = {  # colour, stamp text
+    "strong": ("#1B8A5A", "Strong case"),
+    "medium": ("#C77D00", "Borderline"),
+    "weak": ("#B3261E", "Weak case"),
+}
+
+CSS = """
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap');
+:root { --navy:#0B2545; --navy2:#163B6E; --ink:#14213D; --muted:#5B6B82; --line:#E5E9F0; --paper:#FFFDF7;
+        --ticket:#FFC72C; --green:#1B8A5A; --amber:#C77D00; --red:#B3261E; }
+html, body, .stApp, [data-testid="stSidebar"] { font-family: Inter, "Source Sans Pro", system-ui, sans-serif; }
+#MainMenu, footer, [data-testid="stToolbar"], [data-testid="stDecoration"], [data-testid="stStatusWidget"] { display: none; }
+.block-container { padding-top: 1.6rem; max-width: 880px; }
+@keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes fill { from { width: 0; } }
+@keyframes stamp { from { transform: rotate(-6deg) scale(2.2); opacity: 0; }
+                   70% { transform: rotate(-6deg) scale(.96); opacity: 1; }
+                   to { transform: rotate(-6deg) scale(1); opacity: 1; } }
+
+.pr-hero { position: relative; overflow: hidden; padding: 30px 32px 26px; border-radius: 20px; color: #fff;
+           background: linear-gradient(135deg, var(--navy) 0%, var(--navy2) 100%); animation: rise .6s ease-out both; }
+.pr-mark { display: inline-flex; align-items: center; gap: 10px; font-weight: 800; letter-spacing: .4px; font-size: 1.05rem; }
+.pr-mark .p { width: 32px; height: 32px; border-radius: 8px; background: #fff; color: var(--navy); display: grid;
+              place-items: center; font-weight: 900; font-size: 1.1rem; }
+.pr-hero h1 { font-size: 2.3rem; line-height: 1.08; margin: 16px 0 8px; font-weight: 800; letter-spacing: -.5px; color: #fff; }
+.pr-hero .tag { font-size: 1.08rem; opacity: .92; max-width: 560px; }
+.pr-hero .tag b { color: var(--ticket); white-space: nowrap; }
+.pr-hero svg.ticket { position: absolute; right: -18px; top: -14px; width: 190px; transform: rotate(9deg); opacity: .16; }
+.pr-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 22px; }
+.pr-stat { background: rgba(255,255,255,.09); border: 1px solid rgba(255,255,255,.18); border-radius: 12px; padding: 12px 14px; }
+.pr-stat b { display: block; font-size: 1.55rem; letter-spacing: -.5px; }
+.pr-stat span { font-size: .8rem; opacity: .82; }
+
+.pr-steps { display: flex; gap: 8px; margin: 18px 0 2px; }
+.pr-step { flex: 1; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); font-size: .8rem; color: var(--muted);
+           background: #fff; display: flex; gap: 8px; align-items: center; white-space: nowrap; transition: all .25s ease; }
+.pr-step i { font-style: normal; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center;
+             border: 1.5px solid var(--line); font-size: .72rem; font-weight: 700; flex: none; }
+.pr-step.done { border-color: var(--green); color: var(--ink); }
+.pr-step.done i { background: var(--green); color: #fff; border-color: var(--green); }
+.pr-step.now { border-color: var(--navy); color: var(--ink); box-shadow: 0 0 0 3px rgba(11,37,69,.08); }
+.pr-step.now i { background: var(--navy); color: #fff; border-color: var(--navy); }
+
+.pr-h { display: flex; align-items: baseline; gap: 12px; margin: 30px 0 2px; }
+.pr-h .n { font-size: .74rem; font-weight: 800; letter-spacing: 1.6px; color: var(--navy); text-transform: uppercase; }
+.pr-h h2 { margin: 0; font-size: 1.45rem; font-weight: 800; color: var(--ink); letter-spacing: -.3px; }
+.pr-sub { color: var(--muted); margin: 0 0 12px; font-size: .95rem; }
+
+.pr-verdict { border: 1px solid var(--line); border-radius: 18px; padding: 22px 24px 18px; background: #fff;
+              box-shadow: 0 10px 30px rgba(20,33,61,.06); animation: rise .5s ease-out both; }
+.pr-verdict .lbl { font-size: .74rem; letter-spacing: 1.6px; text-transform: uppercase; color: var(--muted); font-weight: 800; }
+.pr-verdict .top { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.pr-verdict .num { font-size: 3.8rem; font-weight: 800; line-height: 1; color: var(--ink); letter-spacing: -2px; animation: rise .6s ease-out both; }
+.pr-stamp { display: inline-block; padding: 8px 16px; border: 3px solid var(--c); color: var(--c); border-radius: 8px; font-weight: 900;
+            letter-spacing: 2px; text-transform: uppercase; background: #fff; transform: rotate(-6deg);
+            animation: stamp .55s cubic-bezier(.2,1.4,.4,1) both; animation-delay: .35s; }
+.pr-bar { height: 10px; border-radius: 999px; background: #EEF1F6; overflow: hidden; margin: 16px 0 6px; }
+.pr-bar i { display: block; height: 100%; border-radius: 999px; width: var(--p); background: var(--c);
+            animation: fill 1.1s cubic-bezier(.2,.8,.2,1) both; }
+.pr-take { margin-top: 14px; padding: 12px 14px; border-radius: 12px; font-weight: 600; }
+.pr-take.yes { background: #E8F5EE; color: #145C3B; }
+.pr-take.no { background: #FBEAE8; color: #7A1C14; }
+.pr-take small { display: block; font-weight: 500; opacity: .85; margin-top: 4px; }
+.pr-summary { margin: 14px 0 0; color: #2B3A55; font-size: 1.02rem; }
+
+.pr-card { border: 1px solid var(--line); border-left: 4px solid var(--c, var(--navy)); border-radius: 12px; padding: 12px 14px;
+           margin: 8px 0; background: #fff; animation: rise .45s ease-out both; }
+.pr-card b { font-size: 1rem; color: var(--ink); }
+.pr-card .meta { font-size: .74rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-left: 8px; }
+.pr-card p { margin: 6px 0 0; color: #2B3A55; }
+.pr-list { margin: 4px 0 0; padding-left: 18px; color: #2B3A55; }
+.pr-list li { margin: 4px 0; }
+.pr-h3 { font-size: .74rem; letter-spacing: 1.6px; text-transform: uppercase; color: var(--muted); font-weight: 800; margin: 18px 0 6px; }
+
+.pr-paper { background: var(--paper); border: 1px solid #EADFBF; border-radius: 6px; padding: 34px 38px; font-family: "Source Serif 4", Georgia, serif;
+            font-size: 1rem; line-height: 1.55; white-space: pre-wrap; color: #1F2937; max-height: 520px; overflow: auto;
+            box-shadow: 0 12px 32px rgba(20,33,61,.10); animation: rise .6s ease-out both; }
+.pr-receipt { border: 1px dashed #C9D1DE; border-radius: 14px; padding: 18px 20px; background: #fff; max-width: 480px; animation: rise .5s ease-out both; }
+.pr-receipt .row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--line); color: #2B3A55; }
+.pr-receipt .row.total { border: 0; font-weight: 800; font-size: 1.35rem; color: var(--ink); margin-top: 4px; }
+.pr-receipt .note { color: var(--muted); font-size: .85rem; margin-top: 8px; }
+
+[data-testid="stSidebarNavLink"] span[label="app"] p { font-size: 0; }
+[data-testid="stSidebarNavLink"] span[label="app"] p::after { content: "Your case"; font-size: .95rem; }
+.pr-side .pr-mark { color: var(--ink); }
+.pr-side .pr-mark .p { background: var(--navy); color: #fff; }
+.pr-side .tag { color: var(--muted); font-size: .9rem; margin: 6px 0 14px; }
+.pr-side .status { font-size: .85rem; color: var(--ink); padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+.pr-side .status small { color: var(--muted); }
+
+button[data-testid="stBaseButton-primary"] { background: var(--navy); border: 0; border-radius: 12px; padding: .72rem 1rem; font-weight: 700;
+    transition: transform .12s ease, box-shadow .2s ease, background .2s ease; }
+button[data-testid="stBaseButton-primary"]:hover { background: var(--navy2); transform: translateY(-1px); box-shadow: 0 8px 20px rgba(11,37,69,.25); }
+button[data-testid="stBaseButton-secondary"] { border-radius: 12px; font-weight: 600; }
+[data-testid="stTextInput"] input, [data-testid="stNumberInput"] input, [data-testid="stTextArea"] textarea { border-radius: 10px; }
+[data-testid="stExpander"] details { border-radius: 12px; }
+</style>
+"""
+
+TICKET_SVG = """<svg class="ticket" viewBox="0 0 120 160" xmlns="http://www.w3.org/2000/svg">
+<rect x="4" y="4" width="112" height="152" rx="6" fill="#FFC72C"/>
+<rect x="14" y="16" width="92" height="22" rx="3" fill="#0B2545"/>
+<text x="60" y="32" text-anchor="middle" font-size="13" font-weight="800" fill="#fff" font-family="Inter,sans-serif">AFGIFT</text>
+<g fill="#0B2545" opacity=".55"><rect x="14" y="50" width="70" height="5" rx="2"/><rect x="14" y="62" width="92" height="5" rx="2"/>
+<rect x="14" y="74" width="56" height="5" rx="2"/><rect x="14" y="86" width="80" height="5" rx="2"/><rect x="14" y="98" width="40" height="5" rx="2"/></g>
+<rect x="14" y="118" width="92" height="22" rx="3" fill="none" stroke="#0B2545" stroke-width="2" stroke-dasharray="4 3"/>
+<text x="60" y="134" text-anchor="middle" font-size="11" font-weight="700" fill="#0B2545" font-family="Inter,sans-serif">850 DKK</text>
+</svg>"""
+
+
+def esc(v) -> str:
+    return html.escape(str(v if v is not None else ""))
+
+
+def section(n: int, title: str, sub: str) -> None:
+    st.markdown(f"<div class='pr-h'><span class='n'>Step {n}</span><h2>{esc(title)}</h2></div>"
+                f"<p class='pr-sub'>{esc(sub)}</p>", unsafe_allow_html=True)
 
 
 def load_samples() -> list[dict]:
@@ -143,7 +264,7 @@ def ingest_upload(up) -> None:
     filled = [k for k in claims.CLAIM_KEYS if extracted.get(k) not in (None, "", [])]
     note = f"Read {len(filled)} fields from the ticket photo — check them below."
     if not claims.is_live():
-        note += " (Mock mode: the values are illustrative, not read from your image.)"
+        note += " (Demo mode: the values are illustrative, not read from your image.)"
     st.session_state.notice = ("success", note)
 
 
@@ -166,32 +287,48 @@ def on_apply_evidence() -> None:
 # Page
 # ---------------------------------------------------------------------------
 
-st.set_page_config(page_title="ParkRefund", page_icon="🅿️", layout="centered")
+st.set_page_config(page_title="ParkRefund — your personal ticket lawyer", page_icon="🅿️", layout="centered")
+st.markdown(CSS, unsafe_allow_html=True)
 init_state()
 normalize_fields()
 
 with st.sidebar:
-    st.header("ParkRefund")
     live = claims.is_live()
-    st.markdown(f"**Mode:** {'🟢 LIVE' if live else '🟠 MOCK'}")
-    st.markdown(f"**Model:** `{MODEL_NAME}`")
+    st.markdown(
+        "<div class='pr-side'><div class='pr-mark'><span class='p'>P</span>ParkRefund</div>"
+        "<div class='tag'>Your personal ticket lawyer</div></div>", unsafe_allow_html=True)
+    st.markdown(f"**Mode:** {'🟢 LIVE' if live else '🟠 MOCK (demo)'}  \n**Engine:** `{MODEL_NAME}`")
     if not live:
-        st.caption("No ANTHROPIC_API_KEY — deterministic mock output from claims.py / evidence.py.")
+        st.caption("No ANTHROPIC_API_KEY — deterministic demo output from claims.py / evidence.py.")
     st.divider()
     st.caption("The model drafts and recommends; a human files.")
-    st.caption("Synthetic demo data. Not legal advice.")
+    st.caption("Synthetic demo data. ParkRefund is not a law firm — not legal advice.")
 
-# 1 · Hero
-st.title("Parkeringsbøde? Vi henter dine penge hjem.")
-st.subheader("No win, no fee.")
-c1, c2, c3 = st.columns(3)
-c1.metric("Cases handled", "12,480")
-c2.metric("Win rate", "71 %")
-c3.metric("DKK refunded", "6.2 M")
+# Hero
+st.markdown(
+    "<div class='pr-hero'>" + TICKET_SVG +
+    "<div class='pr-mark'><span class='p'>P</span>ParkRefund</div>"
+    "<h1>Parkeringsbøde? Vi henter dine penge hjem.</h1>"
+    "<div class='tag'>Your personal ticket lawyer. Honest odds, a ready-to-send appeal, and <b>no win, no fee</b>.</div>"
+    "<div class='pr-stats'><div class='pr-stat'><b>12,480</b><span>fines fought</span></div>"
+    "<div class='pr-stat'><b>71 %</b><span>won on appeal</span></div>"
+    "<div class='pr-stat'><b>6.2 M DKK</b><span>back in drivers' pockets</span></div></div></div>",
+    unsafe_allow_html=True)
 st.caption("Demo numbers — synthetic data.")
 
-# 2 · Intake
-st.header("1 · Your ticket")
+# Step tracker
+a = st.session_state.assessment
+done_upto = 4 if st.session_state.letter else 3 if a else 1
+labels = ["Your ticket", "What happened", "Your odds", "Appeal letter", "Payout"]
+steps = ""
+for i, lbl in enumerate(labels, start=1):
+    cls = "done" if i <= done_upto else "now" if i == done_upto + 1 else ""
+    mark = "✓" if cls == "done" else str(i)
+    steps += f"<div class='pr-step {cls}'><i>{mark}</i>{lbl}</div>"
+st.markdown(f"<div class='pr-steps'>{steps}</div>", unsafe_allow_html=True)
+
+# 1 · Intake
+section(1, "Your ticket", "Photograph the fine — we read it for you. Or try a sample case.")
 left, right = st.columns(2)
 with left:
     upload = st.file_uploader("Upload a photo of the fine (jpeg / png / webp)", type=PHOTO_TYPES,
@@ -199,7 +336,7 @@ with left:
     st.caption("Demo ticket: `data/tickets/0_NP-2026-004117.png`")
 if upload is not None and upload.file_id != st.session_state.last_upload_id:
     st.session_state.last_upload_id = upload.file_id
-    with st.spinner("Claude is reading your ticket… (~10 s)"):
+    with st.spinner("Reading your ticket… (about 10 s)"):
         ingest_upload(upload)
 with right:
     st.selectbox("…or pick a sample case", SAMPLE_LABELS, key="sample_pick", index=None,
@@ -208,7 +345,8 @@ if st.session_state.notice:
     kind, text = st.session_state.notice
     getattr(st, kind)(text)
 
-st.header("2 · What happened")
+# 2 · Story
+section(2, "What happened", "Your own words. Tick the evidence you have — it moves the odds.")
 col = st.columns(2)
 col[0].radio("Who issued it?", ["public", "private"], key=field("issuer_type"), horizontal=True,
              format_func=lambda v: {"public": "Kommune (public)", "private": "Private operator"}[v])
@@ -234,7 +372,7 @@ with st.expander("Upload evidence photos — the sign, where the car stood"):
         st.image([p.getvalue() for p in photos], width=140)
     if st.button("Check my photos", disabled=not photos):
         try:
-            with st.spinner("Claude is looking at your photos… (~15 s)"):
+            with st.spinner("Inspecting your photos… (about 15 s)"):
                 st.session_state.evidence_check = evidence.check_evidence(
                     [(p.getvalue(), p.type or "image/jpeg") for p in photos], read_claim())
         except Exception as e:  # evidence.py raises RuntimeError on API trouble
@@ -242,7 +380,7 @@ with st.expander("Upload evidence photos — the sign, where the car stood"):
     ec = st.session_state.evidence_check
     if ec:
         if not evidence.is_live():
-            st.caption("Mock mode: illustrative result, not read from your photos.")
+            st.caption("Demo mode: illustrative result, not read from your photos.")
         visible = ec.get("signage_visible")
         if visible is not None:
             st.markdown(f"**Sign visible from where the car stood:** {'yes' if visible else 'no'}")
@@ -256,13 +394,13 @@ with st.expander("Upload evidence photos — the sign, where the car stood"):
             st.info(ec["suggested_additions_to_story"])
             st.button("Add to my story and re-check my case", type="primary", on_click=on_apply_evidence)
 
-# 3 · Assessment
-st.header("3 · Your odds")
+# 3 · Verdict
+section(3, "Your odds", "The honest verdict: what carries your case, what sinks it, and what to go photograph.")
 if st.button("Check my case", type="primary", use_container_width=True):
     if st.session_state.assessment and read_claim() == st.session_state.assessed_claim:
         st.toast("Already checked — edit the form to check again.")  # a second click must not cost another call
     else:
-        with st.spinner("Claude is reading the rulebook… (10–20 s on Opus, ~5 s on Sonnet)"):
+        with st.spinner("Reviewing your fine against the rulebook… (usually 5–20 s)"):
             err = run_assessment()
         if err:
             st.error(err)
@@ -271,44 +409,38 @@ if st.button("Check my case", type="primary", use_container_width=True):
 
 a = st.session_state.assessment
 if a:
-    prob = int(a.get("success_probability", 0))
+    prob = max(0, min(100, int(a.get("success_probability", 0))))
     verdict = str(a.get("verdict", "weak")).lower()
-    colour = {"strong": "#1b8a5a", "medium": "#c77d00", "weak": "#b3261e"}.get(verdict, "#666")
-    c1, c2 = st.columns([1, 2])
-    c1.metric("Chance of winning", f"{prob} %")
-    c2.markdown(
-        f"<div style='margin-top:14px;display:inline-block;padding:8px 18px;border-radius:999px;"
-        f"background:{colour};color:white;font-weight:700;font-size:1.1rem'>{verdict.upper()}</div>",
-        unsafe_allow_html=True)
-    st.progress(min(max(prob, 0), 100))
-    if a.get("recommend_filing"):
-        st.success("We'd take this case. Below is what carries it, and what would make it stronger.")
-    else:
-        st.error("We wouldn't take this case — here's why.")
-        st.caption("No fee, no filing from us. You can still draft a letter below and send it yourself.")
-    st.write(a.get("summary", ""))
+    colour, stamp = VERDICT_STYLE.get(verdict, ("#666", verdict))
+    take = ("<div class='pr-take yes'>We'd take this case. Below is what carries it, and what would make it stronger.</div>"
+            if a.get("recommend_filing") else
+            "<div class='pr-take no'>We wouldn't take this case — here's why.<small>No fee, no filing from us. "
+            "You can still draft a letter below and send it yourself.</small></div>")
+    st.markdown(
+        f"<div class='pr-verdict' style='--c:{colour}'><div class='lbl'>Chance of winning</div>"
+        f"<div class='top'><div class='num'>{prob} %</div><div class='pr-stamp' data-verdict='{esc(verdict)}'>{esc(stamp)}</div></div>"
+        f"<div class='pr-bar'><i style='--p:{prob}%'></i></div>{take}"
+        f"<p class='pr-summary'>{esc(a.get('summary', ''))}</p></div>", unsafe_allow_html=True)
 
     if a.get("grounds"):
-        st.subheader("What helps you")
+        st.markdown("<div class='pr-h3'>What helps you</div>", unsafe_allow_html=True)
         for g in a["grounds"]:
-            with st.container(border=True):
-                tags = " · ".join(t for t in (g.get("category"), str(g.get("strength", "")).lower()) if t)
-                st.markdown(f"**{g.get('title', '')}** · {tags}")
-                st.write(g.get("explanation", ""))
-    if a.get("weaknesses"):
-        st.subheader("What works against you")
-        for w in a["weaknesses"]:
-            st.markdown(f"- {w}")
-    if a.get("evidence_to_collect"):
-        st.subheader("Evidence that would raise the odds")
-        for e in a["evidence_to_collect"]:
-            st.markdown(f"- {e}")
-    with st.container(border=True):
-        st.markdown(f"**Where to appeal:** {a.get('route', '')}")
-        st.markdown(f"**Deadline:** {a.get('deadline_note', '')}")
+            gc = VERDICT_STYLE.get(str(g.get("strength", "")).lower(), ("#0B2545", ""))[0]
+            tags = " · ".join(esc(t) for t in (g.get("category"), str(g.get("strength", "")).lower()) if t)
+            st.markdown(f"<div class='pr-card' style='--c:{gc}'><b>{esc(g.get('title', ''))}</b>"
+                        f"<span class='meta'>{tags}</span><p>{esc(g.get('explanation', ''))}</p></div>",
+                        unsafe_allow_html=True)
+    lists = [(t, items) for t, items in (("What works against you", a.get("weaknesses")),
+                                         ("Evidence that would raise the odds", a.get("evidence_to_collect"))) if items]
+    for col, (title, items) in zip(st.columns(len(lists)) if len(lists) > 1 else [st], lists):
+        col.markdown(f"<div class='pr-h3'>{title}</div><ul class='pr-list'>"
+                     + "".join(f"<li>{esc(x)}</li>" for x in items) + "</ul>", unsafe_allow_html=True)
+    st.markdown(f"<div class='pr-card'><b>Where to appeal</b><p>{esc(a.get('route', ''))}</p>"
+                f"<b style='display:block;margin-top:10px'>Deadline</b><p>{esc(a.get('deadline_note', ''))}</p></div>",
+                unsafe_allow_html=True)
 
     # 4 · Letter
-    st.header("4 · Your appeal letter")
+    section(4, "Your appeal letter", "A ready-to-send indsigelse, citing the ticket, the ground and your evidence.")
     lang = st.radio("Language", ["da", "en"], horizontal=True, key="letter_lang",
                     format_func=lambda v: {"da": "Dansk", "en": "English"}[v])
     if st.button("Draft my appeal", use_container_width=True):
@@ -316,26 +448,31 @@ if a:
             st.toast("Already drafted in this language — switch language to draft again.")
         else:
             try:
-                with st.spinner("Claude is drafting your indsigelse… (10–20 s on Opus, ~5 s on Sonnet)"):
+                with st.spinner("Writing your indsigelse… (usually 5–20 s)"):
                     st.session_state.letter = claims.draft_appeal(st.session_state.assessed_claim, a, language=lang)
                 st.session_state.letter_rev += 1
                 st.session_state.letter_lang_done = lang
             except Exception as e:  # claims.py raises RuntimeError on API trouble
                 st.error(f"Drafting failed: {e}")
     if st.session_state.letter:
-        text = st.text_area("Read it, edit it, sign it", st.session_state.letter, height=420,
-                            key=f"letter_text_{st.session_state.letter_rev}")
+        key = f"letter_text_{st.session_state.letter_rev}"
+        with st.expander("Edit before sending"):
+            st.text_area("Letter", st.session_state.letter, height=360, key=key, label_visibility="collapsed")
+        text = st.session_state.get(key, st.session_state.letter)
+        st.markdown(f"<div class='pr-paper'>{esc(text)}</div>", unsafe_allow_html=True)
         ticket_no = (st.session_state.assessed_claim or {}).get("ticket_number") or "appeal"
         st.download_button("Download as .txt", text, file_name=f"indsigelse_{ticket_no}.txt", mime="text/plain")
-        st.caption("The model drafts and recommends; a human files.")
+        st.caption("The model drafts and recommends; a human files. Read it, sign it, send it.")
 
     # 5 · Payout
-    st.header("5 · If we win")
+    section(5, "If we win", "The whole deal on one receipt.")
     amount = int((st.session_state.assessed_claim or {}).get("amount_dkk") or 0)
     pay = claims.payout(amount)
     fee_pct = round(100 * pay["fee"] / pay["refund"]) if pay.get("refund") else round(100 * SUCCESS_FEE)
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Refund", f"{pay['refund']:,} DKK")
-    c2.metric(f"Our fee ({fee_pct} %)", f"{pay['fee']:,} DKK")
-    c3.metric("You get", f"{pay['you_get']:,} DKK")
+    st.markdown(
+        f"<div class='pr-receipt'><div class='row'><span>Refund</span><b>{pay['refund']:,} DKK</b></div>"
+        f"<div class='row'><span>Our fee ({fee_pct} %)</span><b>−{pay['fee']:,} DKK</b></div>"
+        f"<div class='row total'><span>You get</span><span>{pay['you_get']:,} DKK</span></div>"
+        f"<div class='note'>Paid out when the refund lands. Nothing to pay up front.</div></div>",
+        unsafe_allow_html=True)
     st.caption("You pay nothing if we lose.")
