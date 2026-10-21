@@ -202,6 +202,10 @@ def clear_results() -> None:
 
 def init_state() -> None:
     if st.session_state.get("booted"):
+        # Streamlit drops widget keys while another page (Ops dashboard) is shown: restore the form.
+        saved = st.session_state.get("saved_claim", {})
+        for k in claims.CLAIM_KEYS:
+            st.session_state.setdefault(field(k), saved.get(k, [] if k == "evidence" else 0 if k == "amount_dkk" else ""))
         return
     st.session_state.booted = True
     for k in claims.CLAIM_KEYS:
@@ -231,6 +235,7 @@ def normalize_fields() -> None:
               "driver_story"):
         v = st.session_state[field(k)]
         st.session_state[field(k)] = "" if v is None else str(v)
+    st.session_state.saved_claim = {k: st.session_state[field(k)] for k in claims.CLAIM_KEYS}
 
 
 def run_assessment() -> str | None:
