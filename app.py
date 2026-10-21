@@ -85,6 +85,7 @@ def init_state() -> None:
         st.session_state.sample_pick = SAMPLE_LABELS[0]
     st.session_state.notice = None
     st.session_state.letter_rev = 0
+    st.session_state.last_upload_id = None
     clear_results()
 
 
@@ -127,10 +128,10 @@ def on_pick_sample() -> None:
             return
 
 
-def on_upload() -> None:
-    up = st.session_state.ticket_upload
-    if up is None:
-        return
+def ingest_upload(up) -> None:
+    """Read a freshly uploaded ticket photo into the form. Runs in the main flow (not a
+    callback) so the spinner is visible while the model reads the image; it must run
+    before the form widgets render, since it writes their session-state keys."""
     try:
         extracted = claims.extract_ticket(up.getvalue(), up.type or "image/jpeg")
     except Exception as e:  # claims.py raises RuntimeError on API trouble
@@ -191,12 +192,17 @@ st.caption("Demo numbers — synthetic data.")
 
 # 2 · Intake
 st.header("1 · Your ticket")
-tab_upload, tab_sample = st.tabs(["Upload ticket photo", "Pick a sample case"])
-with tab_upload:
-    st.file_uploader("Photo of the fine (jpeg / png / webp)", type=PHOTO_TYPES,
-                     key="ticket_upload", on_change=on_upload)
-with tab_sample:
-    st.selectbox("Sample case", SAMPLE_LABELS, key="sample_pick", index=None,
+left, right = st.columns(2)
+with left:
+    upload = st.file_uploader("Upload a photo of the fine (jpeg / png / webp)", type=PHOTO_TYPES,
+                              key="ticket_upload")
+    st.caption("Demo ticket: `data/tickets/0_NP-2026-004117.png`")
+if upload is not None and upload.file_id != st.session_state.last_upload_id:
+    st.session_state.last_upload_id = upload.file_id
+    with st.spinner("Reading your ticket…"):
+        ingest_upload(upload)
+with right:
+    st.selectbox("…or pick a sample case", SAMPLE_LABELS, key="sample_pick", index=None,
                  placeholder="Choose a case…", on_change=on_pick_sample)
 if st.session_state.notice:
     kind, text = st.session_state.notice
@@ -271,10 +277,12 @@ if a:
         f"<div style='margin-top:14px;display:inline-block;padding:8px 18px;border-radius:999px;"
         f"background:{colour};color:white;font-weight:700;font-size:1.1rem'>{verdict.upper()}</div>",
         unsafe_allow_html=True)
+    st.progress(min(max(prob, 0), 100))
     if a.get("recommend_filing"):
         st.success("We'd take this case. Below is what carries it, and what would make it stronger.")
     else:
         st.error("We wouldn't take this case — here's why.")
+        st.caption("No fee, no filing from us. You can still draft a letter below and send it yourself.")
     st.write(a.get("summary", ""))
 
     if a.get("grounds"):
@@ -302,7 +310,7 @@ if a:
                     format_func=lambda v: {"da": "Dansk", "en": "English"}[v])
     if st.button("Draft my appeal", use_container_width=True):
         try:
-            with st.spinner("Drafting…"):
+            with st.spinner("Drafting your indsigelse…"):
                 st.session_state.letter = claims.draft_appeal(st.session_state.assessed_claim, a, language=lang)
             st.session_state.letter_rev += 1
         except Exception as e:  # claims.py raises RuntimeError on API trouble
