@@ -20,15 +20,15 @@
   --good:#5fcf93; --good-bg:#15301f; --warn:#f0b452; --warn-bg:#3a2a0e; --bad:#f08a8e; --bad-bg:#3d1719; color-scheme:dark}
 *{box-sizing:border-box}
 html,body{height:100%}
-body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:17px;line-height:1.5;margin:0}
-.stage{min-height:100%;padding-block:28px 120px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:clamp(14px,1.7vh,17px);line-height:1.45;margin:0}
+.stage{min-height:100%;padding-block:clamp(12px,2.5vh,28px) 96px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 .step{display:none;max-width:860px;margin:0 auto}
 .step.active{display:block}
 .step.wide{max-width:1100px}
 h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.1}
 h1{font-size:clamp(34px,6vw,60px);font-weight:900;letter-spacing:-.015em}
-h2{font-size:clamp(24px,3.5vw,34px);font-weight:700}
-h3{font-size:17px;font-weight:700;margin-top:18px}
+h2{font-size:clamp(22px,3.4vh,32px);font-weight:700}
+h3{font-size:clamp(13px,1.6vh,16px);font-weight:700;margin-top:clamp(8px,1.6vh,16px)}
 p{margin:8px 0}
 .muted{color:var(--muted)}
 .eyebrow{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);font-weight:700}
@@ -36,7 +36,7 @@ p{margin:8px 0}
 .pill.mock{background:var(--warn-bg);color:var(--warn)}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:28px}
 .stat{padding:14px 16px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
-.stat b{display:block;font-family:var(--display);font-size:30px;font-variant-numeric:tabular-nums}
+.stat b{display:block;font-family:var(--display);font-size:clamp(20px,3vh,30px);font-variant-numeric:tabular-nums}
 .stat span{font-size:12px;color:var(--muted)}
 .ticket{display:flex;gap:24px;align-items:flex-start;margin-top:18px;flex-wrap:wrap}
 .ticket img{width:220px;max-width:100%;border-radius:8px;border:1px solid var(--line)}
@@ -50,11 +50,13 @@ p{margin:8px 0}
 .field.full{grid-column:1/-1}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{font-size:13px;padding:4px 10px;border-radius:999px;background:var(--soft);color:var(--accent);font-weight:500}
-.verdict{display:grid;grid-template-columns:auto 1fr;gap:6px 24px;align-items:center;margin-top:18px}
-.verdict .num{font-family:var(--display);font-size:clamp(56px,9vw,84px);font-weight:900;line-height:1;font-variant-numeric:tabular-nums}
+.verdict{display:grid;grid-template-columns:auto 1fr;gap:6px 24px;align-items:center;margin-top:clamp(8px,1.6vh,16px)}
+.verdict .num{font-family:var(--display);font-size:clamp(48px,9vh,80px);font-weight:900;line-height:1;font-variant-numeric:tabular-nums}
+.gline{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line)}
+.gline .cat{font-size:12px;color:var(--muted)}
 .badge{display:inline-block;padding:8px 16px;border-radius:999px;font-weight:700;font-size:16px;letter-spacing:.05em}
 .badge.strong{background:var(--good);color:#fff}.badge.medium{background:var(--warn);color:#fff}.badge.weak{background:var(--bad);color:#fff}
-.banner{padding:14px 16px;border-radius:8px;margin-top:16px;font-weight:600;font-size:18px}
+.banner{padding:10px 14px;border-radius:8px;margin-top:12px;font-weight:600;font-size:clamp(15px,2vh,18px)}
 .banner.good{background:var(--good-bg);color:var(--good)}.banner.bad{background:var(--bad-bg);color:var(--bad)}
 .cols{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:6px}
 .ground{padding:12px 14px;border:1px solid var(--line);border-radius:8px;background:var(--surface);margin-top:8px}
@@ -67,15 +69,15 @@ ul{margin:6px 0 0;padding-left:20px}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
 .seg button{font:500 14px var(--body);padding:7px 14px;border:0;background:var(--surface);color:var(--fg);cursor:pointer}
 .seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-fg)}
-pre.letter{font-family:var(--mono);font-size:13px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;padding:16px;border:1px solid var(--line);border-radius:8px;background:var(--surface);margin:12px 0 0;max-height:52vh;overflow:auto}
+pre.letter{font-family:var(--mono);font-size:clamp(11px,1.35vh,13px);line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere;padding:14px;border:1px solid var(--line);border-radius:8px;background:var(--surface);margin:10px 0 0;max-height:54vh;overflow:hidden;-webkit-mask-image:linear-gradient(#000 85%,transparent);mask-image:linear-gradient(#000 85%,transparent)}
 .payout{display:grid;grid-template-columns:1fr auto;gap:10px 16px;margin-top:14px;padding:16px 18px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-variant-numeric:tabular-nums;font-size:17px}
 .payout .total{font-family:var(--display);font-size:26px;font-weight:700;border-top:1px solid var(--line);padding-top:10px}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:14px}
 .bars{display:grid;grid-template-columns:70px 1fr 56px;gap:8px 10px;align-items:center;margin-top:10px;font-size:13px}
 .bar{height:14px;background:var(--accent);border-radius:3px}
-.tablewrap{overflow-x:auto;margin-top:12px;border:1px solid var(--line);border-radius:8px;max-height:38vh;overflow-y:auto}
-table{border-collapse:collapse;width:100%;font-size:13px;min-width:720px}
-th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+.tablewrap{overflow-x:auto;margin-top:8px;border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;font-size:clamp(11px,1.4vh,13px);min-width:640px}
+th,td{text-align:left;padding:clamp(4px,.8vh,8px) 10px;border-bottom:1px solid var(--line);vertical-align:middle}
 th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:var(--surface);position:sticky;top:0}
 td.num{font-variant-numeric:tabular-nums}
 select{font:inherit;font-size:13px;padding:4px 6px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--fg)}
@@ -86,7 +88,8 @@ select{font:inherit;font-size:13px;padding:4px 6px;border-radius:6px;border:1px 
 .close li{margin-top:8px}
 .nav{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);padding-top:12px;padding-bottom:calc(12px + env(safe-area-inset-bottom,0px));padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));z-index:5}
 .nav .in{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center}
-.say{font-size:15px;line-height:1.4;color:var(--fg);min-width:0}
+.say{display:none;font-size:15px;line-height:1.4;color:var(--fg);min-width:0}
+.nav.notes .say{display:block}
 .say b{color:var(--accent);font-family:var(--display);font-weight:700;margin-right:8px;white-space:nowrap}
 .dots{display:flex;gap:5px;margin-top:6px}
 .dots i{width:22px;height:4px;border-radius:2px;background:var(--line)}
@@ -99,8 +102,8 @@ select{font:inherit;font-size:13px;padding:4px 6px;border-radius:6px;border:1px 
 <div class="stage">
 
   <section class="step active" id="s0">
-    <div class="eyebrow">ParkRefund · <span class="pill mock">MOCK replay — deterministic outputs from claims.py</span></div>
-    <h1 style="margin-top:16px">Parkeringsbøde?<br>Vi henter dine penge hjem.</h1>
+    <div class="eyebrow">ParkRefund</div>
+    <h1 style="margin-top:16px">Parking fine?<br>We get your money back.</h1>
     <p class="muted" style="font-size:22px;margin-top:14px;max-width:680px">Upload the fine, tell us what happened, get an honest verdict and a ready-to-send Danish appeal. <strong style="color:var(--fg)">No win, no fee.</strong></p>
     <div class="stats">
       <div class="stat"><b>650–900</b><span>DKK — a private operator's fine</span></div>
@@ -162,7 +165,7 @@ select{font:inherit;font-size:13px;padding:4px 6px;border-radius:6px;border:1px 
       <div style="min-width:0"><h3>Where the paralegal's time goes now <span class="muted" style="font-weight:400;font-size:13px">avg minutes / case</span></h3><div class="bars" id="minbars"></div></div>
     </div>
     <h3>Review queue — the 40–60 % band <span class="muted" style="font-weight:400;font-size:13px" id="decided"></span></h3>
-    <div class="tablewrap"><table><thead><tr><th>Case</th><th>Human decision</th><th>Issuer</th><th>DKK</th><th>Odds</th><th>Category</th><th>Received</th></tr></thead><tbody id="queue"></tbody></table></div>
+    <div class="tablewrap"><table><thead><tr><th>Case</th><th>Human decision</th><th>Issuer</th><th>DKK</th><th>Odds</th><th>Category</th></tr></thead><tbody id="queue"></tbody></table></div>
   </section>
 
   <section class="step" id="s7">
@@ -180,7 +183,7 @@ select{font:inherit;font-size:13px;padding:4px 6px;border-radius:6px;border:1px 
 </div>
 
 <div class="nav"><div class="in">
-  <button class="btn" id="prev" aria-label="Previous step">← Prev</button>
+  <div style="display:flex;gap:8px"><button class="btn" id="prev" aria-label="Previous step">← Prev</button><button class="btn" id="notes" aria-pressed="false" title="Speaker notes (N)" style="color:var(--muted)">Notes</button></div>
   <div><div class="say" id="say"></div><div class="dots" id="dots"></div></div>
   <button class="btn primary" id="next" aria-label="Next step">Next →</button>
 </div></div>
@@ -224,18 +227,19 @@ function form(){
     <div class="field"><label>Who issued it?</label><div>${c.issuer_type==="private"?"Private operator":"Kommune"} — ${esc(c.issuer_name)}</div></div>
     <div class="field"><label>Ticket</label><div><span style="font-family:var(--mono)">${esc(c.ticket_number)}</span> · ${esc(c.plate)} · ${dkk(c.amount_dkk)} kr.</div></div>`;
 }
-function verdictHTML(i, compact){
+function verdictHTML(i, weak){
   const a = CASES[i].assessment, c = CASES[i].claim, take = a.recommend_filing;
-  return `<p class="muted" style="margin-top:6px">${esc(c.label)} · ${esc(c.issuer_name)} · ${dkk(c.amount_dkk)} kr.${compact?` · <em>"${esc(c.driver_story.slice(0,110))}…"</em>`:""}</p>
+  const grounds = (a.grounds||[]).slice(0,3).map(g=>`<div class="gline"><div><strong>${esc(g.title)}</strong><div class="cat">${esc(g.category)}</div></div><span class="str ${g.strength}">${g.strength}</span></div>`).join("");
+  const left = weak
+    ? `<h3>What works against you</h3><ul>${(a.weaknesses||[]).slice(0,3).map(w=>`<li>${esc(w)}</li>`).join("")}</ul>`
+    : `<h3>What helps you</h3>${grounds||'<p class="muted">No ground that usually wins.</p>'}`;
+  const right = weak
+    ? `<h3>The ground, as the rulebook sees it</h3>${grounds}`
+    : `<h3>Evidence that would raise the odds</h3><ul>${(a.evidence_to_collect||[]).slice(0,2).map(e=>`<li>${esc(e)}</li>`).join("")}</ul><div class="route"><strong>Where:</strong> ${esc(a.route.split(". ")[0])}.</div>`;
+  return `<p class="muted" style="margin-top:4px">${esc(c.label)} · ${esc(c.issuer_name)} · ${dkk(c.amount_dkk)} kr.${weak?` · <em>"${esc(c.driver_story.slice(0,90))}…"</em>`:""}</p>
     <div class="verdict"><div><div class="eyebrow">Chance of winning</div><div class="num">${a.success_probability} %</div></div><div><span class="badge ${a.verdict}">${a.verdict.toUpperCase()}</span></div></div>
-    <div class="banner ${take?"good":"bad"}">${take?"We'd take this case. Below is what carries it, and what would make it stronger.":"We wouldn't take this case — here's why."}</div>
-    <p>${esc(a.summary)}</p>
-    <div class="cols">
-      <div style="min-width:0"><h3>What helps you</h3>${(a.grounds||[]).map(g=>`<div class="ground"><div class="head"><strong>${esc(g.title)}</strong><span class="str ${g.strength}">${g.strength}</span></div><div class="cat">Category: ${esc(g.category)}</div><p style="font-size:14px">${esc(g.explanation)}</p></div>`).join("")||'<p class="muted">No ground that usually wins.</p>'}
-      ${(a.weaknesses||[]).length?`<h3>What works against you</h3><ul>${a.weaknesses.map(w=>`<li>${esc(w)}</li>`).join("")}</ul>`:""}</div>
-      <div style="min-width:0"><h3>Evidence that would raise the odds</h3><ul>${(a.evidence_to_collect||[]).map(e=>`<li>${esc(e)}</li>`).join("")}</ul>
-      <div class="route"><strong>Where to appeal:</strong> ${esc(a.route)}<br><strong>Deadline:</strong> ${esc(a.deadline_note)}</div></div>
-    </div>`;
+    <div class="banner ${take?"good":"bad"}">${take?"We'd take this case.":"We wouldn't take this case."}</div>
+    <div class="cols"><div style="min-width:0">${left}</div><div style="min-width:0">${right}</div></div>`;
 }
 function letter(){
   const t = lang==="da"?CASES[STRONG].letter_da:CASES[STRONG].letter_en;
@@ -272,10 +276,11 @@ function kpis(){
   bars("#minbars", minBy, " min", Math.max(...ORDER.map(minBy))||1);
 }
 function queue(){
-  const q = PIPE.filter(r=>r.model_probability>=40&&r.model_probability<=60&&["new","pending"].includes(r.status)).sort((a,b)=>String(b.received_at).localeCompare(String(a.received_at)));
-  $("#queue").innerHTML = q.map(r=>`<tr><td style="font-family:var(--mono)">${esc(r.id)}</td><td><select data-id="${esc(r.id)}" aria-label="Decision for ${esc(r.id)}"><option value="">—</option><option>file</option><option>decline</option><option>needs more evidence</option></select></td><td>${esc(r.issuer_name)}</td><td class="num">${dkk(r.amount_dkk)}</td><td class="num"><span class="str ${r.model_verdict}">${r.model_probability} %</span></td><td>${esc(r.category)}</td><td class="muted">${esc(String(r.received_at).slice(0,10))}</td></tr>`).join("");
-  $("#queue").querySelectorAll("select").forEach(s=>{ s.value = decided[s.dataset.id]||""; s.onchange=()=>{ if(s.value) decided[s.dataset.id]=s.value; else delete decided[s.dataset.id]; count(q.length); }; });
-  count(q.length);
+  const all = PIPE.filter(r=>r.model_probability>=40&&r.model_probability<=60&&["new","pending"].includes(r.status)).sort((a,b)=>String(b.received_at).localeCompare(String(a.received_at)));
+  const q = all.slice(0,6);
+  $("#queue").innerHTML = q.map(r=>`<tr><td style="font-family:var(--mono)">${esc(r.id)}</td><td><select data-id="${esc(r.id)}" aria-label="Decision for ${esc(r.id)}"><option value="">—</option><option>file</option><option>decline</option><option>needs more evidence</option></select></td><td>${esc(r.issuer_name)}</td><td class="num">${dkk(r.amount_dkk)}</td><td class="num"><span class="str ${r.model_verdict}">${r.model_probability} %</span></td><td>${esc(r.category)}</td></tr>`).join("");
+  $("#queue").querySelectorAll("select").forEach(s=>{ s.value = decided[s.dataset.id]||""; s.onchange=()=>{ if(s.value) decided[s.dataset.id]=s.value; else delete decided[s.dataset.id]; count(all.length); }; });
+  count(all.length);
 }
 function count(n){ $("#decided").textContent = `${n} in queue · ${Object.keys(decided).length} decided this session`; }
 
@@ -291,8 +296,9 @@ function go(n){
   window.scrollTo({top:0});
 }
 $("#prev").onclick = () => go(i-1);
+$("#notes").onclick = () => { const on = document.querySelector(".nav").classList.toggle("notes"); $("#notes").setAttribute("aria-pressed", String(on)); };
 $("#next").onclick = () => go(i===steps.length-1 ? 0 : i+1);
-document.addEventListener("keydown", e => { if(e.target.tagName==="SELECT") return; if(e.key==="ArrowRight"||e.key===" "||e.key==="PageDown"){e.preventDefault();go(i+1);} if(e.key==="ArrowLeft"||e.key==="PageUp"){e.preventDefault();go(i-1);} });
+document.addEventListener("keydown", e => { if(e.target.tagName==="SELECT") return; if(e.key==="ArrowRight"||e.key===" "||e.key==="PageDown"){e.preventDefault();go(i+1);} if(e.key==="ArrowLeft"||e.key==="PageUp"){e.preventDefault();go(i-1);} if(e.key==="n"||e.key==="N"){$("#notes").click();} });
 
 ticket(); form();
 $("#verdict").innerHTML = verdictHTML(STRONG, false);
