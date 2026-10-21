@@ -76,13 +76,14 @@ st.bar_chart(mins)
 st.subheader("Review queue (40–60% band)")
 st.caption("Model drafts and recommends; a human files.")
 q = df[band & df.status.isin(["new", "pending"])].sort_values("received_at", ascending=False)
-q = q[["id", "received_at", "issuer_name", "amount_dkk", "category", "model_probability", "top_ground", "new_from_app"]].copy()
+q = q[["id", "issuer_name", "amount_dkk", "model_probability", "category", "top_ground", "new_from_app"]].copy()
 q = q.rename(columns={"top_ground": "summary"})
-q["Human decision"] = q["id"].map(st.session_state.get("decisions", {}))
+# Decision column second, so the one click the demo is about is on screen without scrolling sideways.
+q.insert(1, "Human decision", q["id"].map(st.session_state.get("decisions", {})))
 edited = st.data_editor(
     q, hide_index=True, width="stretch", key="queue",
     disabled=[c for c in q.columns if c != "Human decision"],
     column_config={"Human decision": st.column_config.SelectboxColumn(
         "Human decision", options=["file", "decline", "needs more evidence"])})
-st.session_state["decisions"] = {i: d for i, d in zip(edited["id"], edited["Human decision"]) if d}
+st.session_state["decisions"] = {i: d for i, d in zip(edited["id"], edited["Human decision"]) if isinstance(d, str) and d}
 st.caption(f"{len(q)} cases in queue; {len(st.session_state['decisions'])} decided this session.")
