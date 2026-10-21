@@ -199,7 +199,7 @@ with left:
     st.caption("Demo ticket: `data/tickets/0_NP-2026-004117.png`")
 if upload is not None and upload.file_id != st.session_state.last_upload_id:
     st.session_state.last_upload_id = upload.file_id
-    with st.spinner("Reading your ticket…"):
+    with st.spinner("Claude is reading your ticket… (~10 s)"):
         ingest_upload(upload)
 with right:
     st.selectbox("…or pick a sample case", SAMPLE_LABELS, key="sample_pick", index=None,
@@ -234,7 +234,7 @@ with st.expander("Upload evidence photos — the sign, where the car stood"):
         st.image([p.getvalue() for p in photos], width=140)
     if st.button("Check my photos", disabled=not photos):
         try:
-            with st.spinner("Looking at your photos…"):
+            with st.spinner("Claude is looking at your photos… (~15 s)"):
                 st.session_state.evidence_check = evidence.check_evidence(
                     [(p.getvalue(), p.type or "image/jpeg") for p in photos], read_claim())
         except Exception as e:  # evidence.py raises RuntimeError on API trouble
@@ -259,12 +259,15 @@ with st.expander("Upload evidence photos — the sign, where the car stood"):
 # 3 · Assessment
 st.header("3 · Your odds")
 if st.button("Check my case", type="primary", use_container_width=True):
-    with st.spinner("Reading the rulebook…"):
-        err = run_assessment()
-    if err:
-        st.error(err)
+    if st.session_state.assessment and read_claim() == st.session_state.assessed_claim:
+        st.toast("Already checked — edit the form to check again.")  # a second click must not cost another call
     else:
-        st.session_state.notice = None
+        with st.spinner("Claude is reading the rulebook… (10–20 s on Opus, ~5 s on Sonnet)"):
+            err = run_assessment()
+        if err:
+            st.error(err)
+        else:
+            st.session_state.notice = None
 
 a = st.session_state.assessment
 if a:
@@ -309,12 +312,16 @@ if a:
     lang = st.radio("Language", ["da", "en"], horizontal=True, key="letter_lang",
                     format_func=lambda v: {"da": "Dansk", "en": "English"}[v])
     if st.button("Draft my appeal", use_container_width=True):
-        try:
-            with st.spinner("Drafting your indsigelse…"):
-                st.session_state.letter = claims.draft_appeal(st.session_state.assessed_claim, a, language=lang)
-            st.session_state.letter_rev += 1
-        except Exception as e:  # claims.py raises RuntimeError on API trouble
-            st.error(f"Drafting failed: {e}")
+        if st.session_state.letter and st.session_state.get("letter_lang_done") == lang:
+            st.toast("Already drafted in this language — switch language to draft again.")
+        else:
+            try:
+                with st.spinner("Claude is drafting your indsigelse… (10–20 s on Opus, ~5 s on Sonnet)"):
+                    st.session_state.letter = claims.draft_appeal(st.session_state.assessed_claim, a, language=lang)
+                st.session_state.letter_rev += 1
+                st.session_state.letter_lang_done = lang
+            except Exception as e:  # claims.py raises RuntimeError on API trouble
+                st.error(f"Drafting failed: {e}")
     if st.session_state.letter:
         text = st.text_area("Read it, edit it, sign it", st.session_state.letter, height=420,
                             key=f"letter_text_{st.session_state.letter_rev}")
