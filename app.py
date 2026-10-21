@@ -82,13 +82,13 @@ html, body, .stApp, [data-testid="stSidebar"] { font-family: Inter, "Source Sans
                 font-family: Inter, sans-serif; font-weight: 900; font-size: 1.5rem; letter-spacing: 3px; padding: 6px 14px; border-radius: 8px; mix-blend-mode: multiply; }
 .pr-slip .refund { position: absolute; right: 12px; top: 10px; background: #1B8A5A; color: #fff; font-family: Inter, sans-serif; font-weight: 800; padding: 6px 10px; border-radius: 999px;
                    font-size: .85rem; opacity: 0; transform: translateY(8px); box-shadow: 0 8px 20px rgba(0,0,0,.25); }
-.pr-slip.loop .scan { animation: prscan 7s ease-in-out infinite; }
-.pr-slip.loop .big { animation: prstampin 7s cubic-bezier(.2,1.4,.4,1) infinite; }
-.pr-slip.loop .refund { animation: prrefund 7s ease-out infinite; }
-@keyframes prscan { 0%,8% { top: 0; opacity: 0; } 10% { opacity: 1; } 32% { top: 100%; opacity: 1; } 34%,100% { opacity: 0; top: 100%; } }
-@keyframes prstampin { 0%,38% { opacity: 0; transform: translate(-50%,-50%) rotate(-14deg) scale(2.4); } 46% { opacity: 1; transform: translate(-50%,-50%) rotate(-14deg) scale(.96); }
-                       50%,88% { opacity: 1; transform: translate(-50%,-50%) rotate(-14deg) scale(1); } 96%,100% { opacity: 0; transform: translate(-50%,-50%) rotate(-14deg) scale(1); } }
-@keyframes prrefund { 0%,52% { opacity: 0; transform: translateY(8px); } 58%,88% { opacity: 1; transform: none; } 96%,100% { opacity: 0; transform: translateY(8px); } }
+.pr-slip.once .scan { animation: prscan 4s ease-in-out 1 both; }
+.pr-slip.once .big { animation: prstampin 4s cubic-bezier(.2,1.4,.4,1) 1 both; }
+.pr-slip.once .refund { animation: prrefund 4s ease-out 1 both; }
+@keyframes prscan { 0%,10% { top: 0; opacity: 0; } 12% { opacity: 1; } 40% { top: 100%; opacity: 1; } 42%,100% { opacity: 0; top: 100%; } }
+@keyframes prstampin { 0%,48% { opacity: 0; transform: translate(-50%,-50%) rotate(-14deg) scale(2.4); } 58% { opacity: 1; transform: translate(-50%,-50%) rotate(-14deg) scale(.96); }
+                       62%,100% { opacity: 1; transform: translate(-50%,-50%) rotate(-14deg) scale(1); } }
+@keyframes prrefund { 0%,66% { opacity: 0; transform: translateY(8px); } 74%,100% { opacity: 1; transform: none; } }
 .pr-slip.small { width: min(250px, 100%); font-size: .7rem; transform: rotate(-2deg); padding: 12px; box-shadow: 0 10px 30px rgba(20,33,61,.15); margin: 6px 0 12px; }
 .pr-slip.small .amount { font-size: 1.2rem; }
 @keyframes prflash { 0% { background: #FFE89A; box-shadow: 0 0 0 3px rgba(255,199,44,.55); } 100% { box-shadow: none; } }
@@ -349,7 +349,7 @@ st.markdown(
     "<div class='da'>Parkeringsbøde? Vi henter dine penge hjem.</div>"
     "<div class='pr-cta'><a href='#step-1'>Check my odds — it's free</a><a class='ghost' href='#step-1'>Try the sample ticket</a></div>"
     "<div class='pr-trust'><span>No win, no fee</span><span>30 % only on refunds</span><span>Verdict in under a minute</span></div>"
-    "</div><div class='pr-slipwrap'><div class='pr-slip loop'>" + SLIP_HTML + "</div></div></div>"
+    "</div><div class='pr-slipwrap'><div class='pr-slip once'>" + SLIP_HTML + "</div></div></div>"
     "<div class='pr-stats'><div class='pr-stat'><b>12,480</b><span>fines fought</span></div>"
     "<div class='pr-stat'><b>71 %</b><span>won on appeal</span></div>"
     "<div class='pr-stat'><b>6,214,350 DKK</b><span>back in drivers' pockets</span></div></div></div>",
