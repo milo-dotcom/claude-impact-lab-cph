@@ -322,8 +322,41 @@ def on_apply_evidence() -> None:
 # Page
 # ---------------------------------------------------------------------------
 
+CSS_LAW = """
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&display=swap');
+/* law-office treatment: bright ivory, serif type, brass rule; controls stay sans for legibility */
+:root { --navy: #1F3A5F; --navy2: #2C5282; --ink: #1C2430; --muted: #5E6673; --line: #E6E2D8; --ivory: #FBFAF7; --gold: #B08D57;
+        --serif: "Source Serif 4", Georgia, "Times New Roman", serif; --display: "Libre Caslon Text", Georgia, "Times New Roman", serif;
+        --sans: Inter, system-ui, sans-serif; }
+html, body, .stApp, [data-testid="stSidebar"], .stMarkdown, p, li { font-family: var(--serif); }
+h1, h2, .pr-verdict .num, .pr-receipt .row.total, .pr-mark, .pr-stat b { font-family: var(--display); }
+.pr-mark { font-weight: 700; letter-spacing: 0; font-size: 1.15rem; }
+.pr-eyebrow, .pr-h .n, .pr-h3, .pr-step, .pr-stamp, .pr-cta a, .pr-trust, .pr-verdict .lbl, .pr-card .meta, .pr-side .status,
+button, input, textarea, label, [data-testid="stWidgetLabel"], [data-testid="stCaptionContainer"], [data-testid="stAlert"] { font-family: var(--sans); }
+.pr-hero { background: #fff; color: var(--ink); border: 1px solid var(--line); border-top: 4px solid var(--gold); box-shadow: 0 12px 40px rgba(28,36,48,.06); }
+.pr-hero .pr-mark { color: var(--ink); } .pr-hero .pr-mark .p { background: var(--navy); color: #fff; }
+.pr-hero h1 { color: var(--ink); font-weight: 700; letter-spacing: -.2px; } .pr-hero h1 em { color: var(--navy); }
+.pr-eyebrow { color: var(--gold); }
+.pr-hero .tag { color: var(--ink); opacity: 1; } .pr-hero .tag b { color: var(--navy); }
+.pr-hero .da { color: var(--muted); opacity: 1; }
+.pr-cta a { background: var(--navy); color: #fff !important; border-color: var(--navy); }
+.pr-cta a.ghost { background: transparent; color: var(--navy) !important; border-color: var(--navy); }
+.pr-trust { color: var(--muted); opacity: 1; } .pr-trust span::before { color: var(--green); }
+.pr-stat { background: var(--ivory); border: 1px solid var(--line); } .pr-stat b { color: var(--ink); } .pr-stat span { color: var(--muted); opacity: 1; }
+.pr-slip { box-shadow: 0 16px 40px rgba(28,36,48,.22); }
+.pr-step.now { box-shadow: 0 0 0 3px rgba(31,58,95,.12); }
+.pr-h .n { color: var(--gold); }
+.pr-side .pr-mark .p { background: var(--navy); }
+.pr-paper { font-family: var(--serif); }
+button[data-testid="stBaseButton-primary"] { background: var(--navy); }
+button[data-testid="stBaseButton-primary"]:hover { background: var(--navy2); box-shadow: 0 8px 20px rgba(31,58,95,.25); }
+</style>
+"""
+
 st.set_page_config(page_title="ParkRefund — your personal ticket lawyer", page_icon="🅿️", layout="centered")
 st.markdown(CSS, unsafe_allow_html=True)
+st.markdown(CSS_LAW, unsafe_allow_html=True)
 init_state()
 normalize_fields()
 
