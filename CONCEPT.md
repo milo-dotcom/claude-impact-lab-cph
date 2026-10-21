@@ -47,6 +47,36 @@ PITCH.md                 2-minute pitch + click-by-click demo path              
 
 Epic with everything linked: https://github.com/milo-dotcom/claude-impact-lab-cph/issues/1
 
+### Build order
+
+```mermaid
+graph LR
+  PR9[PR #9 rules.py] --> I8[#8 claims.py + sample cases]
+  PR9 --> I5[#5 evals]
+  I8 --> I5
+  I8 -. live mode .-> I2[#2 app.py]
+  I8 -. sample cases .-> I3[#3 ticket images]
+  I3 -. upload demo .-> I2
+  I3 -. sign photos .-> I4[#4 evidence.py]
+  I4 -. expander .-> I2
+  I2 --> I7[#7 pitch]
+  I6[#6 ops dashboard] --> I7
+```
+
+Solid = hard dependency. Dotted = needed for the demo, not to start — mock mode and the frozen
+contract mean #2, #4 and #6 can begin immediately.
+
+| Wave | When | Work |
+|---|---|---|
+| 0 | now | merge PR #9 |
+| 1 | T+0 → T+45 | #8 claims.py · #2 app.py (mock) · #6 dashboard |
+| 2 | T+45 → T+90 | #3 ticket images · #5 evals · #7 pitch draft · #2 wires live mode |
+| 3 | T+90 → T+120 | #4 evidence (stretch) · #2 integrates #3/#4 · #7 final · first Opus run |
+| — | T+120 | feature freeze, everything on `main` |
+| — | T+150 | rehearsal ×2 (second with no `.env`) |
+
+If wave 1 slips, cut wave 3 — never #2 or #6.
+
 ### Interface contract (`claims.py`)
 
 Build against this now; don't wait for `claims.py` to land. In mock mode (no API key) every
