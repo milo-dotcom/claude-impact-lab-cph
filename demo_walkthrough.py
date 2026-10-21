@@ -31,8 +31,10 @@ def shot(pg, name, full=True):
 
 
 def pick_sample(pg, text):
-    pg.get_by_role("tab", name="Pick a sample case").click()
-    time.sleep(0.8)
+    tab = pg.get_by_role("tab", name="Pick a sample case")
+    if tab.count():  # older layout had the picker behind a tab
+        tab.click()
+        time.sleep(0.8)
     combo = pg.get_by_role("combobox").first
     combo.scroll_into_view_if_needed()
     combo.click()
