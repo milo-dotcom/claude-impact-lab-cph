@@ -31,7 +31,8 @@ PARKREFUND_MODEL=claude-opus-5-5 .venv/bin/streamlit run app.py  # with .env →
 ```
 
 What it is: AirHelp for Danish parking fines — upload the ticket, get an honest verdict, a Danish
-appeal letter, no win no fee. Concept and plan: `CONCEPT.md`. Demo script: `PITCH.md`. First 30 days after launch: `GTM.md`.
+appeal letter, no win no fee. Concept and plan: `CONCEPT.md`. Demo script: `PITCH.md`. **Screenshots of every step + one-command
+end-to-end test: `DEMO.md`.** First 30 days after launch: `GTM.md`.
 All data is synthetic. The model drafts and recommends; a human files.
 
 Don't `export ANTHROPIC_API_KEY` in your shell. If you do, Claude Code will bill the event credits instead of your subscription.
