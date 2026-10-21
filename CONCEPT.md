@@ -11,6 +11,11 @@ Most people pay even when they'd win on appeal, because the appeal is tedious an
 know the rules. ParkRefund: upload the ticket, tell us what happened, get an **honest** verdict on
 your odds, a ready-to-send Danish appeal letter, and pay a 30% success fee only if the money comes back.
 
+**Private tickets first.** Parkeringsklagenævnet only hears private operators' kontrolafgifter and
+that's where published decisions exist (see `docs/data-sources.md`); there is no public corpus of
+municipal outcomes. The demo leads with a private case; public fines stay supported. The nævn's
+11 decision categories (`rules.CATEGORIES`) are our taxonomy for grounds.
+
 **The job angle (what the judges care about):** the work this automates is the junior
 paralegal's — triaging hundreds of small claims and writing boilerplate appeals. The ops
 dashboard shows what the human's job becomes: reviewing only the borderline cases (40–60%
@@ -34,18 +39,47 @@ odds), overriding the model, and owning the filing. Model drafts and recommends;
 Streamlit app, Python in `.venv`, Anthropic SDK. No frameworks beyond that (see `CLAUDE.md`).
 
 ```
-rules.py                 simplified Danish parking rulebook (grounding text) + SUCCESS_FEE     DONE (v1)   PR #9
-claims.py                Claude layer: extract_ticket / assess_claim / draft_appeal + mock mode  IN PROGRESS issue #8
-data/sample_cases.json   5 synthetic claims (ships with claims.py)                              IN PROGRESS issue #8
-app.py                   Streamlit customer flow (steps 1–5 above)                              OPEN        issue #2
-make_tickets.py          synthetic ticket images → data/tickets/*.png for the upload demo       OPEN        issue #3
-evidence.py              vision check of the user's sign / car-position photos                  OPEN        issue #4
-evals/                   ~15 labelled cases + runner: is the assessor calibrated to rules.py?   OPEN        issue #5
-pages/1_Ops_dashboard.py the back-office view + data/pipeline.json (synthetic)                  OPEN        issue #6
-PITCH.md                 2-minute pitch + click-by-click demo path                              OPEN        issue #7
+rules.py                 simplified Danish parking rulebook + CATEGORIES + SUCCESS_FEE          on main
+docs/data-sources.md     real data sources checked live (WFS signage, nævn decisions)           on main
+claims.py                Claude layer: extract_ticket / assess_claim / draft_appeal + mock mode  issue #8
+data/sample_cases.json   5 synthetic claims (ships with claims.py)                              issue #8
+app.py                   Streamlit customer flow (steps 1–5 above)                              issue #2
+make_tickets.py          synthetic ticket images → data/tickets/*.png for the upload demo       issue #3
+evidence.py              vision check of the user's sign / car-position photos                  issue #4
+evals/                   ~15 labelled cases + runner: is the assessor calibrated to rules.py?   issue #5
+pages/1_Ops_dashboard.py the back-office view + data/pipeline.json (synthetic)                  issue #6
+PITCH.md                 2-minute pitch + click-by-click demo path                              issue #7
 ```
 
-Epic with everything linked: https://github.com/milo-dotcom/claude-impact-lab-cph/issues/1
+Who owns what, live status, and the plan: **issue #1** —
+https://github.com/milo-dotcom/claude-impact-lab-cph/issues/1
+
+### Build order
+
+```mermaid
+graph LR
+  I8[#8 claims.py + sample cases] --> I5[#5 evals]
+  I8 -. live mode .-> I2[#2 app.py]
+  I8 -. sample cases .-> I3[#3 ticket images]
+  I3 -. upload demo .-> I2
+  I3 -. sign photos .-> I4[#4 evidence.py]
+  I4 -. expander .-> I2
+  I2 --> I7[#7 pitch]
+  I6[#6 ops dashboard] --> I7
+```
+
+Solid = hard dependency. Dotted = needed for the demo, not to start — mock mode and the frozen
+contract mean #2, #4 and #6 can begin immediately.
+
+| Wave | When | Work |
+|---|---|---|
+| 1 | T+0 → T+45 | #8 claims.py · #2 app.py (mock) · #6 dashboard |
+| 2 | T+45 → T+90 | #3 ticket images · #5 evals · #7 pitch draft · #2 wires live mode |
+| 3 | T+90 → T+120 | #4 evidence (stretch) · #2 integrates #3/#4 · #7 final · first Opus run |
+| — | T+120 | feature freeze, everything on `main` |
+| — | T+150 | rehearsal ×2 (second with no `.env`) |
+
+If wave 1 slips, cut wave 3 — never #2 or #6.
 
 ### Interface contract (`claims.py`)
 
@@ -63,7 +97,8 @@ def is_live() -> bool                                              # False → m
 def extract_ticket(image_bytes: bytes, media_type: str) -> dict    # partial claim dict from a ticket photo
 def assess_claim(claim: dict) -> dict
 #   {"success_probability": int 0-100, "verdict": "strong"|"medium"|"weak", "summary": str,
-#    "grounds": [{"title": str, "strength": "strong"|"medium"|"weak", "explanation": str}],
+#    "grounds": [{"title": str, "category": str,            # category ∈ rules.CATEGORIES
+#                 "strength": "strong"|"medium"|"weak", "explanation": str}],
 #    "weaknesses": [str], "evidence_to_collect": [str], "route": str, "deadline_note": str,
 #    "recommend_filing": bool}
 def draft_appeal(claim: dict, assessment: dict, language: str = "da") -> str
@@ -74,10 +109,10 @@ def payout(amount_dkk: int) -> dict                                # {"refund", 
 
 ## How to pick up work
 
-1. Pick an open issue (#2–#7), comment "taking this" so nobody doubles up.
-2. `git checkout -b parkrefund-<thing>` from `main` (or from `parkrefund-rules` if you need
-   `rules.py` before PR #9 merges). **One owner per file** — if you need a change in someone
-   else's file, comment on their issue instead of editing it.
+1. Find your name in the table on issue #1; that's your issue. Unassigned ones are up for grabs —
+   comment "taking this" so nobody doubles up. Keep your status row on #1 current.
+2. `git checkout -b parkrefund-<thing>` from `main`. **One owner per file** — if you need a
+   change in someone else's file, comment on their issue instead of editing it.
 3. Setup is in `README.md`. Run the app with `.venv/bin/streamlit run app.py`. No `.env` → mock mode.
 4. Open a PR against `main` when it runs end to end. Ugly and working beats polished and partial.
 

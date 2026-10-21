@@ -46,6 +46,11 @@ RULES = """
 - Paid via app but for the wrong zone/area code.
 - The fine was placed on the car but blew away / was lost (the issuer's photo proves placement).
 
+## Scope note
+Parkeringsklagenævnet only hears PRIVATE operators' kontrolafgifter, and that is where published
+decisions exist, so private cases are the primary target. Public (kommune) fines are still
+supported but there is no public corpus of outcomes for them.
+
 ## Procedure
 - Always appeal in writing, within the deadline printed on the ticket (commonly 10 days to pay, but
   appeals are accepted later; the fine is paused while a complaint is being handled).
@@ -55,6 +60,37 @@ RULES = """
   the ground(s), the attached evidence, and what you request (annulment / "annullering").
 - Deadline to complain to Parkeringsklagenævnet: within ~4 weeks of the operator's rejection.
 """
+
+# Parkeringsklagenævnet's own decision categories (see docs/data-sources.md). The assessor labels
+# every ground with one of these so our output speaks the regulator's language.
+CATEGORIES = [
+    "Skiltning",
+    "P-skive",
+    "P-billet",
+    "Digital registrering",
+    "Standsning og observation",
+    "Handicapparkering",
+    "P-tilladelse",
+    "Gæste-/periodekort",
+    "Opmærkning og områdets indretning",
+    "Motorcykel/knallert",
+    "Formalitet og gyldighedsbetingelser",
+]
+
+# Rough mapping from the rulebook's grounds to those categories, for prompts and evals.
+CATEGORY_HINTS = {
+    "Skiltning": "missing, hidden, unclear or incomplete signage; entrance sign lacks price/rules/operator",
+    "P-skive": "parking disc set wrongly, missing, or disputed rounding",
+    "P-billet": "paper ticket not visible, fell down, expired, or was valid",
+    "Digital registrering": "app/ANPR payment with plate typo, wrong zone, or registration lag",
+    "Standsning og observation": "loading/unloading, stopping vs parking, observation period not respected",
+    "Handicapparkering": "handicap bay with or without a visible permit",
+    "P-tilladelse": "resident/business permit displayed or registered",
+    "Gæste-/periodekort": "guest or period card validity",
+    "Opmærkning og områdets indretning": "bay markings, layout, where the car actually stood",
+    "Motorcykel/knallert": "two-wheeler specific rules",
+    "Formalitet og gyldighedsbetingelser": "wrong plate/date/location on the fine, no photo, deadlines",
+}
 
 # Success fee charged on a won case, AirHelp-style "no win, no fee".
 SUCCESS_FEE = 0.30
