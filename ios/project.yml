@@ -1,0 +1,22 @@
+# XcodeGen spec. On a Mac with Xcode:  brew install xcodegen && cd ios && xcodegen && open ParkRefund.xcodeproj
+name: ParkRefund
+options:
+  bundleIdPrefix: dk.parkrefund
+  deploymentTarget:
+    iOS: "17.0"
+targets:
+  ParkRefund:
+    type: application
+    platform: iOS
+    sources: [ParkRefund]
+    info:
+      path: ParkRefund/Info.plist
+      properties:
+        UILaunchScreen: {}
+        NSPhotoLibraryUsageDescription: Pick a photo of your parking ticket so we can read it.
+        NSCameraUsageDescription: Photograph your parking ticket.
+        NSAppTransportSecurity: { NSAllowsLocalNetworking: true }   # http://localhost:8000 in the simulator
+    settings:
+      base:
+        SWIFT_VERSION: "5.9"
+        PRODUCT_BUNDLE_IDENTIFIER: dk.parkrefund.app
