@@ -72,7 +72,7 @@ html, body, .stApp, [data-testid="stSidebar"] { font-family: Inter, "Source Sans
            font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: .78rem; box-shadow: 0 20px 50px rgba(0,0,0,.35); transform: rotate(-3deg); overflow: hidden; }
 .pr-slip .head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-weight: 800; font-size: .95rem; letter-spacing: 1px;
                  border-bottom: 2px dashed rgba(0,0,0,.28); padding-bottom: 8px; margin-bottom: 8px; font-family: Inter, sans-serif; }
-.pr-slip .head span { font-weight: 600; font-size: .72rem; letter-spacing: 0; }
+.pr-slip .head span { font-weight: 600; font-size: .72rem; letter-spacing: 0; white-space: nowrap; }
 .pr-slip .row { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; }
 .pr-slip .row span { opacity: .7; } .pr-slip .row b { text-align: right; }
 .pr-slip .amount { font-family: Inter, sans-serif; font-weight: 800; font-size: 1.5rem; text-align: right; margin-top: 8px; border-top: 2px solid rgba(0,0,0,.6); padding-top: 6px; }
