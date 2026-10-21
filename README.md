@@ -23,6 +23,8 @@ Test:
 
 ## Run the demo (ParkRefund)
 
+**Shareable 2-minute demo (no install):** https://claude.ai/artifact/XQufJwdkuqk9pL2cQx9kQ4 — eight screens, → to advance, N for speaker notes.
+
 ```bash
 .venv/bin/pip install -r requirements.txt
 .venv/bin/streamlit run app.py                                   # no .env → mock mode, everything still works
