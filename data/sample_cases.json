@@ -1,0 +1,72 @@
+[
+  {
+    "label": "Private - missing entrance signage",
+    "issuer_type": "private",
+    "issuer_name": "NordPark ApS",
+    "ticket_number": "NP-2026-004117",
+    "plate": "AB 12 345",
+    "date": "2026-10-03",
+    "time": "14:12",
+    "location": "Testgade 14, 2100 Testkøbing (NordPark parkeringsplads bag Torvecentret)",
+    "amount_dkk": 850,
+    "reason_on_ticket": "Parkering uden gyldig p-billet",
+    "driver_story": "I drove into the car park behind the shopping centre. There was no sign at the entrance at all, only a faded sign on a wall far inside the lot that I could not see from where I parked. I went shopping for an hour and came back to a ticket. I took photos of the entrance and the empty sign post the same day.",
+    "evidence": ["Photos of the entrance without any sign", "Photo of where the car was parked", "The ticket"]
+  },
+  {
+    "label": "Private - paid in app, plate typo",
+    "issuer_type": "private",
+    "issuer_name": "CityParkering A/S",
+    "ticket_number": "CP-88213907",
+    "plate": "CD 34 567",
+    "date": "2026-09-27",
+    "time": "11:40",
+    "location": "Havnevej 3, 2200 Testkøbing (CityParkering P-hus Havnen)",
+    "amount_dkk": 750,
+    "reason_on_ticket": "Ingen registreret betaling for køretøjet",
+    "driver_story": "I paid for two hours in the parking app and have the receipt. When I typed the plate in the app I made a typo: one character wrong (CD 34 576 instead of CD 34 567). The receipt shows payment covering the time of the ticket, so I did pay for the stay.",
+    "evidence": ["App payment receipt covering the ticket time", "The ticket", "Photo of the car registration certificate"]
+  },
+  {
+    "label": "Public - loading/unloading",
+    "issuer_type": "public",
+    "issuer_name": "Testkøbing Kommune",
+    "ticket_number": "TK-2026-0099231",
+    "plate": "EF 56 789",
+    "date": "2026-10-09",
+    "time": "08:55",
+    "location": "Algade 22, 2300 Testkøbing",
+    "amount_dkk": 510,
+    "reason_on_ticket": "Parkering i strid med færdselstavle (parkering forbudt)",
+    "driver_story": "I stopped for about 2 minutes to unload boxes of goods at a shop door, with the hazard lights on, staying by the car. My colleague stood on the pavement and saw the whole thing. The attendant issued the ticket while I was carrying boxes inside.",
+    "evidence": ["Written statement from a witness (colleague)", "Delivery note with the time", "The ticket"]
+  },
+  {
+    "label": "Private - forgot p-skive",
+    "issuer_type": "private",
+    "issuer_name": "NordPark ApS",
+    "ticket_number": "NP-2026-005502",
+    "plate": "GH 78 901",
+    "date": "2026-10-12",
+    "time": "16:20",
+    "location": "Stationsvej 8, 2400 Testkøbing (NordPark p-plads ved Testkøbing Station)",
+    "amount_dkk": 650,
+    "reason_on_ticket": "Manglende eller forkert indstillet p-skive",
+    "driver_story": "I forgot to put out my p-skive. I was only 10 min over the time limit and everyone else parks there anyway. I did see the signs but I did not think they would ticket for just a few minutes.",
+    "evidence": ["The ticket"]
+  },
+  {
+    "label": "Private - ticketed 1 min after arrival",
+    "issuer_type": "private",
+    "issuer_name": "CityParkering A/S",
+    "ticket_number": "CP-88245510",
+    "plate": "JK 90 123",
+    "date": "2026-10-15",
+    "time": "12:31",
+    "location": "Søndergade 5, 2500 Testkøbing (CityParkering p-plads Søndergade)",
+    "amount_dkk": 900,
+    "reason_on_ticket": "Parkering uden gyldig p-billet",
+    "driver_story": "I arrived at 12:30 and was walking to the payment machine when I saw the attendant already writing the ticket at 12:31, only 1 minute after I arrived. I paid in the app at 12:34, 3 minutes after the ticket time, and have the receipt with the timestamp.",
+    "evidence": ["App receipt timestamped 12:34", "The ticket with time 12:31", "Photo of the payment machine location"]
+  }
+]
