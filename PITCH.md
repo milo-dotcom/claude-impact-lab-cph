@@ -34,7 +34,7 @@ PARKREFUND_MODEL=claude-opus-5-5 .venv/bin/streamlit run app.py     # with .env 
 | 3 | **Check my case** | "Here's the honest part. 78%, strong. The ground is *Skiltning* — that's the regulator's own category. It tells you what helps, what hurts, and exactly which photo to go take." |
 | 4 | **Draft my appeal** (Danish) → **Download** | "A ready-to-send *indsigelse* to the operator, in Danish, citing the ticket, the ground, the attached evidence. You send it." |
 | 5 | **5 · If we win** | "850 back, we keep 30%, you get 595. If we lose, you pay nothing." |
-| 6 | Pick sample case **"Private - forgot p-skive"** → **Check my case** | "And this is why people trust it: 5%, weak, *we wouldn't take this case.* We say no when the rulebook says no." |
+| 6 | Tab **Pick a sample case** → **"Private - forgot p-skive"** → **Check my case** | "And this is why people trust it: 5%, weak, *we wouldn't take this case.* We say no when the rulebook says no." |
 
 **The job angle (1:25–1:50)** — sidebar → **Ops dashboard**
 > This is the back office. Every claim is triaged and drafted by the model. The paralegal's job used
