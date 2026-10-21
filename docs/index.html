@@ -84,8 +84,13 @@ select{font:inherit;font-size:13px;padding:4px 6px;border-radius:6px;border:1px 
 .btn{font:600 15px var(--body);padding:10px 16px;border-radius:8px;border:1px solid var(--line);cursor:pointer;background:var(--surface);color:var(--fg)}
 .btn.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
 .btn:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.close{font-size:20px;max-width:720px}
-.close li{margin-top:8px}
+.plan{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:clamp(12px,2.5vh,24px)}
+.card{padding:clamp(14px,2.2vh,22px);border:1px solid var(--line);border-radius:10px;background:var(--surface);min-width:0}
+.card h3{margin-top:8px;font-size:clamp(17px,2.3vh,22px)}
+.card p{font-size:clamp(13px,1.6vh,15px);color:var(--muted);margin-top:8px}
+.card.red{background:var(--bad);border-color:var(--bad);color:#fff}
+.card.red .eyebrow,.card.red p{color:#fff;opacity:.92}
+@media (max-width:760px){.plan{grid-template-columns:1fr}}
 .nav{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);padding-top:12px;padding-bottom:calc(12px + env(safe-area-inset-bottom,0px));padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));z-index:5}
 .nav .in{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center}
 .say{display:none;font-size:15px;line-height:1.4;color:var(--fg);min-width:0}
@@ -169,15 +174,14 @@ select{font:inherit;font-size:13px;padding:4px 6px;border-radius:6px;border:1px 
   </section>
 
   <section class="step" id="s7">
-    <div class="eyebrow">What's next</div>
-    <h2 style="margin-top:8px">Built in three hours. Shipped in thirty days.</h2>
-    <ul class="close">
-      <li><strong>Copenhagen, private tickets, one channel</strong> — search ads at the moment of anger, QR flyers at the 20 worst car parks.</li>
-      <li><strong>Five Monday numbers</strong> — win rate ≥ 55 %, cost per filed case ≤ 100 DKK, handler ≤ 10 min, first refund ≤ 21 days.</li>
-      <li><strong>Before customer #1</strong> — a lawyer's two hours on the rulebook, GDPR, terms. Human stays in the loop.</li>
-      <li><strong>Model drafts and recommends. A human files.</strong> That line is the product.</li>
-    </ul>
-    <p class="foot">Thank you. · github.com/milo-dotcom/claude-impact-lab-cph</p>
+    <div class="eyebrow">The 30-day impact plan</div>
+    <h2 style="margin-top:8px">Built in three hours. Tested in thirty days.</h2>
+    <div class="plan">
+      <div class="card"><div class="eyebrow">01 · Owner</div><h3>JC takes it forward</h3><p>Owns the repo, the live URL and the first ten cases. milo-dotcom on data: nævn decisions, signage.</p></div>
+      <div class="card"><div class="eyebrow">02 · First real-world test</div><h3>Ten real tickets in Copenhagen</h3><p>Private kontrolafgifter from the last 30 days. They upload, get the verdict, send the letter themselves. We learn: does a handler agree, do people send on "strong" and stop on "weak", what the operators answer.</p></div>
+      <div class="card red"><div class="eyebrow">03 · Support we need</div><h3>A lawyer, a pilot operator, credits</h3><p>Two hours of a Danish lawyer on the rulebook. One operator or kommune as a pilot counterpart. Nævn decision corpus access. API credits for 500 assessments. A part-time case handler for weeks 3–4.</p></div>
+    </div>
+    <p class="foot">Model drafts and recommends. A human files. · github.com/milo-dotcom/claude-impact-lab-cph</p>
   </section>
 
 </div>
@@ -206,7 +210,7 @@ const SAY = [
   ["0:55", "A ready-to-send indsigelse, in Danish, citing the ticket, the ground, the evidence. 850 back, we keep 30 %, you get 595. If we lose, you pay nothing."],
   ["1:10", "And this is why people trust it: 5 %, weak — we wouldn't take this case. We say no when the rulebook says no."],
   ["1:25", "The back office. Every claim is triaged and drafted by the model. The paralegal's job is now this queue — only the 40–60 % cases, where judgement matters — and the final say on every filing."],
-  ["1:50", "Three hours, synthetic data. Next: a lawyer on the rulebook, the real nævn decisions for calibration, operator APIs for filing. Thank you."],
+  ["1:50", "Thirty days: JC owns it; ten real tickets in Copenhagen are the first test — do people send on strong and stop on weak; we need two hours of a lawyer, one pilot operator, and credits. Thank you."],
 ];
 
 function ticket(){
