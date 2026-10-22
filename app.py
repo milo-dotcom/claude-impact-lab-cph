@@ -1,6 +1,6 @@
-"""ParkRefund customer flow: landing → intake → assessment → letter → payout.
+"""ParkRefund flow: landing → choose your AI → intake → assessment → letter. Free, open source, donations welcome.
 
-Run: .venv/bin/streamlit run app.py
+Run: .venv/bin/streamlit run app.py --server.address 127.0.0.1
 
 Talks to claims.py (issue #8) through the contract in CONCEPT.md, and to evidence.py
 (issue #4) for the sign / car-position photo check. No .env → both run in mock mode.
@@ -16,17 +16,17 @@ from pathlib import Path
 import streamlit as st
 from dotenv import load_dotenv
 
+import chatgpt
 import claims
 import evidence
-from rules import SUCCESS_FEE
 
 load_dotenv()
 
 EVIDENCE_OPTIONS = ["sign photos", "payment receipt", "breakdown receipt", "witness", "permit"]
 PHOTO_TYPES = ["jpg", "jpeg", "png", "webp"]
 MAX_EVIDENCE_PHOTOS = 5
-MODEL_NAME = os.environ.get("PARKREFUND_MODEL", "claude-sonnet-5-5")
 SAMPLE_CASES_PATH = Path(__file__).parent / "data" / "sample_cases.json"
+REPO = "https://github.com/milo-dotcom/claude-impact-lab-cph"  # code and donations
 NEXT_STEP = {  # the one thing to do next, shown right under the verdict badge
     "strong": "Next: send the letter below.",
     "medium": "Next: get the evidence listed below, then re-check.",
@@ -299,40 +299,47 @@ def on_apply_evidence() -> None:
 # Page
 # ---------------------------------------------------------------------------
 
-st.set_page_config(page_title="ParkRefund — your personal ticket lawyer", page_icon="🅿️", layout="centered")
+st.set_page_config(page_title="ParkRefund — free, open-source help with parking fines", page_icon="🅿️", layout="centered")
 st.markdown(CSS, unsafe_allow_html=True)
+# Reachable only from this machine? Then .env keys and ChatGPT sign-in are the user's own; otherwise they'd be shared.
+LOCAL = st.get_option("server.address") in claims.LOOPBACK
+claims.guard_server_credentials(LOCAL)
 init_state()
 normalize_fields()
 
 with st.sidebar:
-    live = claims.is_live()
     st.markdown(
         "<div class='pr-side'><div class='pr-mark'><span class='p'>P</span>ParkRefund</div>"
-        "<div class='tag'>Your personal ticket lawyer</div></div>", unsafe_allow_html=True)
-    st.markdown(f"**Mode:** {'🟢 LIVE' if live else '🟠 MOCK (demo)'}  \n**Engine:** `{MODEL_NAME}`")
+        "<div class='tag'>Free, open source, on your side</div></div>", unsafe_allow_html=True)
+    live = claims.is_live()
+    st.markdown(f"**Mode:** {'🟢 LIVE' if live else '🟠 MOCK (demo)'}  \n**Engine:** `{claims._model()}`")
     if not live:
-        st.caption("No ANTHROPIC_API_KEY — deterministic demo output from claims.py / evidence.py.")
+        st.caption("Demo mode: deterministic sample output. Choose your AI in step 1 to go live.")
     st.divider()
     st.markdown("**Prototype — not legal advice. All demo data is synthetic.**")
     st.caption("The model drafts and recommends; a human files.")
+    st.caption(f"Free and open source. [Code and donations]({REPO})")
 
 # Hero
 st.markdown(
     "<div class='pr-hero'>" + TICKET_SVG +
     "<div class='pr-mark'><span class='p'>P</span>ParkRefund</div>"
-    "<h1>Parkeringsbøde? Vi henter dine penge hjem.</h1>"
-    "<div class='tag'>Your personal ticket lawyer. Honest odds, a ready-to-send appeal, and <b>no win, no fee</b>.</div>"
-    "<div class='pr-stats'><div class='pr-stat'><b>12,480</b><span>fines fought</span></div>"
+    "<h1>Got a parking fine? Check if it holds up — for free.</h1>"
+    "<div class='tag'>An open-source tool for better living in Denmark. Honest odds and a ready-to-send appeal, "
+    "<b>free for everyone</b>. Nobody should have to pay a company to be treated fairly by one. "
+    "Donations keep it running.</div>"
+    "<div class='pr-stats'><div class='pr-stat'><b>12,480</b><span>fines checked</span></div>"
     "<div class='pr-stat'><b>71 %</b><span>won on appeal</span></div>"
-    "<div class='pr-stat'><b>6.2 M DKK</b><span>back in drivers' pockets</span></div></div>"
-    "<p class='pr-lead'>Take a photo of the fine. 60 seconds to an honest answer.</p></div>",
+    "<div class='pr-stat'><b>6.2 M DKK</b><span>kept by drivers, not by us</span></div></div>"
+    "<p class='pr-lead'>Take a photo of the fine. 60 seconds to an honest answer. "
+    "Run it yourself, read the code, improve it.</p></div>",
     unsafe_allow_html=True)
 st.caption("Demo numbers — synthetic data.")
 
 # Step tracker
 a = st.session_state.assessment
-done_upto = 4 if st.session_state.letter else 3 if a else 1
-labels = ["Your ticket", "What happened", "Your odds", "Appeal letter", "Payout"]
+done_upto = 5 if st.session_state.letter else 4 if a else 2 if claims.is_live() else 0
+labels = ["Your AI", "Your ticket", "What happened", "Your odds", "Appeal letter"]
 steps = ""
 for i, lbl in enumerate(labels, start=1):
     cls = "done" if i <= done_upto else "now" if i == done_upto + 1 else ""
@@ -340,8 +347,53 @@ for i, lbl in enumerate(labels, start=1):
     steps += f"<div class='pr-step {cls}'><i>{mark}</i>{lbl}</div>"
 st.markdown(f"<div class='pr-steps'>{steps}</div>", unsafe_allow_html=True)
 
-# 1 · Intake
-section(1, "Your ticket", "Photograph the fine — we read it for you. Or try a sample case.")
+# 1 · Choose your AI
+section(1, "Your AI", "ParkRefund is free, but the AI that reads your ticket and writes the letter is not. Bring your own.")
+st.markdown(
+    "**Why:** the ticket photo, the verdict and the appeal letter are produced by a language model. "
+    "There is no ParkRefund server in the middle: your photos go straight from this app to the AI provider you choose, "
+    "billed to you. **How much:** reading the ticket, the verdict and the letter use about 5,000–8,000 tokens together. "
+    "Each evidence photo adds about 2,000, and the re-check after photos about 3,000, so a full case with five photos is "
+    "roughly 20,000–25,000 tokens: a small slice of a ChatGPT plan's daily allowance, or well under 1 DKK on an API key.")
+if chatgpt.signed_in():
+    st.success("Using your ChatGPT plan. [Manage usage](https://chatgpt.com/settings/usage)")
+    if st.button("Sign out of ChatGPT"):
+        chatgpt.logout()
+        st.rerun()
+elif claims._claude():
+    st.success("Using Claude via the key or login in `.env`.")
+elif claims._openai():
+    st.success("Using OpenAI via the API key in `.env`.")
+else:
+    if claims.server_key_present() and not claims.SERVER_KEYS:
+        st.warning("This app is reachable from other computers, so it won't spend the API key in `.env` for them. "
+                   "Run it with `--server.address 127.0.0.1` to use your key yourself, or set "
+                   "`PARKREFUND_SHARE_SERVER_KEY=1` to share it (capped per hour; set a spend limit too).")
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        st.markdown("**ChatGPT Plus or Pro**")
+        # The sign-in page opens on the machine running the app, so only offer it when nobody else can reach it.
+        if not LOCAL:
+            st.caption("Run ParkRefund on your own computer to use your plan: "
+                       "`streamlit run app.py --server.address 127.0.0.1`")
+        elif st.button("Continue with ChatGPT", help="Signs in this browser only. Signs out when you close the app."):
+            try:
+                with st.spinner("Finish signing in in your browser…"):
+                    chatgpt.login()
+            except Exception as e:  # chatgpt.py raises RuntimeError with a safe message
+                st.error(f"ChatGPT sign-in failed: {e}")
+            else:
+                st.rerun()
+    with c2:
+        st.markdown("**Claude or OpenAI API key**")
+        st.caption("Put `ANTHROPIC_API_KEY=` or `OPENAI_API_KEY=` in `.env` and restart. "
+                   "A Claude Pro plan has no API access; use a Console key or `ant auth login`.")
+    with c3:
+        st.markdown("**Just looking**")
+        st.caption("Stay in demo mode: the whole flow works with illustrative answers. Nothing is read from your photos.")
+
+# 2 · Intake
+section(2, "Your ticket", "Photograph the fine — we read it for you. Or try a sample case.")
 left, right = st.columns(2)
 with left:
     upload = st.file_uploader("Upload a photo of the fine (jpeg / png / webp)", type=PHOTO_TYPES,
@@ -360,7 +412,7 @@ if st.session_state.notice:
     getattr(st, kind)(text)
 
 # 2 · Story
-section(2, "What happened", "Your own words. Tick the evidence you have — it moves the odds.")
+section(3, "What happened", "Your own words. Tick the evidence you have — it moves the odds.")
 col = st.columns(2)
 col[0].radio("Who issued it?", ["public", "private"], key=field("issuer_type"), horizontal=True,
              format_func=lambda v: {"public": "Kommune (public)", "private": "Private operator"}[v])
@@ -409,7 +461,7 @@ with st.expander("Upload evidence photos — the sign, where the car stood"):
             st.button("Add to my story and re-check my case", type="primary", on_click=on_apply_evidence)
 
 # 3 · Verdict
-section(3, "Your odds", "The honest verdict: what carries your case, what sinks it, and what to go photograph.")
+section(4, "Your odds", "The honest verdict: what carries your case, what sinks it, and what to go photograph.")
 if st.button("Check my case", type="primary", use_container_width=True):
     if st.session_state.assessment and read_claim() == st.session_state.assessed_claim:
         st.toast("Already checked — edit the form to check again.")  # a second click must not cost another call
@@ -427,9 +479,9 @@ if a:
     verdict = str(a.get("verdict", "weak")).lower()
     colour, stamp = VERDICT_STYLE.get(verdict, ("#666", verdict))
     next_step = NEXT_STEP.get(verdict, NEXT_STEP["medium"])
-    take = ("<div class='pr-take yes'>We'd take this case. Below is what carries it, and what would make it stronger.</div>"
+    take = ("<div class='pr-take yes'>Worth appealing. Below is what carries it, and what would make it stronger.</div>"
             if a.get("recommend_filing") else
-            "<div class='pr-take no'>We wouldn't take this case — here's why.<small>No fee, no filing from us. "
+            "<div class='pr-take no'>We wouldn't appeal this one — here's why.<small>"
             "You can still draft a letter below and send it yourself.</small></div>")
     st.markdown(
         f"<div class='pr-verdict' style='--c:{colour}'><div class='lbl'>Chance of winning</div>"
@@ -456,7 +508,7 @@ if a:
                 unsafe_allow_html=True)
 
     # 4 · Letter
-    section(4, "Your appeal letter", "A ready-to-send indsigelse, citing the ticket, the ground and your evidence.")
+    section(5, "Your appeal letter", "A ready-to-send indsigelse, citing the ticket, the ground and your evidence.")
     lang = st.radio("Language", ["da", "en"], horizontal=True, key="letter_lang",
                     format_func=lambda v: {"da": "Dansk", "en": "English"}[v])
     if st.button("Draft my appeal", use_container_width=True):
@@ -480,15 +532,9 @@ if a:
         st.download_button("Download as .txt", text, file_name=f"indsigelse_{ticket_no}.txt", mime="text/plain")
         st.caption("The model drafts and recommends; a human files. Read it, sign it, send it.")
 
-    # 5 · Payout
-    section(5, "If we win", "The whole deal on one receipt.")
     amount = int((st.session_state.assessed_claim or {}).get("amount_dkk") or 0)
-    pay = claims.payout(amount)
-    fee_pct = round(100 * pay["fee"] / pay["refund"]) if pay.get("refund") else round(100 * SUCCESS_FEE)
     st.markdown(
-        f"<div class='pr-receipt'><div class='row'><span>Refund</span><b>{pay['refund']:,} DKK</b></div>"
-        f"<div class='row'><span>Our fee ({fee_pct} %)</span><b>−{pay['fee']:,} DKK</b></div>"
-        f"<div class='row total'><span>You get</span><span>{pay['you_get']:,} DKK</span></div>"
-        f"<div class='note'>Paid out when the refund lands. Nothing to pay up front.</div></div>",
+        f"<div class='pr-receipt'><div class='row'><span>If you win, you keep</span><b>{amount:,} DKK</b></div>"
+        f"<div class='row'><span>ParkRefund's cut</span><b>0 DKK</b></div>"
+        f"<div class='note'>Free and open source. If it helped, <a href='{REPO}'>a donation</a> keeps it running for the next driver.</div></div>",
         unsafe_allow_html=True)
-    st.caption("You pay nothing if we lose.")

@@ -9,7 +9,7 @@ import os
 import sys
 
 if "--mock" in sys.argv:
-    os.environ["ANTHROPIC_API_KEY"] = ""  # set-but-empty wins over .env, so claims.is_live() is False
+    os.environ["ANTHROPIC_API_KEY"] = os.environ["ANTHROPIC_PROFILE"] = os.environ["OPENAI_API_KEY"] = ""  # set-but-empty wins over .env, so claims.is_live() is False
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import claims  # noqa: E402
 

@@ -7,8 +7,8 @@
 ```bash
 git checkout main && git pull
 .venv/bin/pip install -r requirements.txt
-PARKREFUND_MODEL=claude-opus-5-5 .venv/bin/streamlit run app.py     # with .env → LIVE
-.venv/bin/streamlit run app.py                                       # no .env → MOCK (fallback)
+PARKREFUND_MODEL=claude-opus-5-5 .venv/bin/streamlit run app.py --server.address 127.0.0.1     # with .env → LIVE
+.venv/bin/streamlit run app.py --server.address 127.0.0.1                                       # no .env → MOCK (fallback)
 ```
 
 - Sidebar must say **LIVE** for the real demo. If the API is down or slow, delete `.env`, restart:

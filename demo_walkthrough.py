@@ -53,7 +53,7 @@ def main():
         old.unlink()
     env = dict(os.environ, PYTHONUNBUFFERED="1")
     server = subprocess.Popen(
-        [sys.executable, "-m", "streamlit", "run", str(REPO / "app.py"), "--server.headless", "true",
+        [sys.executable, "-m", "streamlit", "run", str(REPO / "app.py"), "--server.address", "127.0.0.1", "--server.headless", "true",
          "--server.port", str(PORT), "--browser.gatherUsageStats", "false"],
         cwd=REPO, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:

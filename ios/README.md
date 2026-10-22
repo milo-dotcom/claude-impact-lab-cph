@@ -1,6 +1,6 @@
 # ParkRefund iOS
 
-SwiftUI client for the customer flow: photo → odds → appeal letter → payout. Talks to `api.py`.
+SwiftUI client for the flow: photo → odds → appeal letter (you send it yourself). Talks to `api.py`.
 
 ## Run
 
@@ -18,4 +18,3 @@ Simulator reaches the Mac at `http://localhost:8000` (default). On a real phone,
 first screen. That opens the API (no login) to everyone on the Wi-Fi, so only do it on a network you trust.
 
 Files: `Models.swift` mirrors the `claims.py` contract; `API.swift` is the client; one view per step.
-The web page for managing submissions is `api.py` → `/admin` (synthetic queue in `data/claims_store.json`).

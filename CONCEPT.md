@@ -113,7 +113,7 @@ def payout(amount_dkk: int) -> dict                                # {"refund", 
    comment "taking this" so nobody doubles up. Keep your status row on #1 current.
 2. `git checkout -b parkrefund-<thing>` from `main`. **One owner per file** — if you need a
    change in someone else's file, comment on their issue instead of editing it.
-3. Setup is in `README.md`. Run the app with `.venv/bin/streamlit run app.py`. No `.env` → mock mode.
+3. Setup is in `README.md`. Run the app with `.venv/bin/streamlit run app.py --server.address 127.0.0.1`. No `.env` → mock mode.
 4. Open a PR against `main` when it runs end to end. Ugly and working beats polished and partial.
 
 ## Conventions
