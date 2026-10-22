@@ -1,11 +1,11 @@
 import SwiftUI
 
-// Freetrailer-style: one job per screen, one big button. Photo → verdict → letter → payout.
+// One job per screen, one big button. Photo → verdict → letter. Free and open source: you send the letter yourself.
 struct ContentView: View {
     @State private var claim = Claim()
     @State private var path: [Step] = []
 
-    enum Step: Hashable { case verdict(Assessment), letter(Assessment), payout(Assessment) }
+    enum Step: Hashable { case verdict(Assessment), letter(Assessment) }
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -14,8 +14,7 @@ struct ContentView: View {
                 .navigationDestination(for: Step.self) { step in
                     switch step {
                     case .verdict(let a): VerdictView(claim: claim, assessment: a) { path.append(.letter(a)) }
-                    case .letter(let a): LetterView(claim: claim, assessment: a) { path.append(.payout(a)) }
-                    case .payout(let a): PayoutView(claim: claim, assessment: a) { path = []; claim = Claim() }
+                    case .letter(let a): LetterView(claim: claim, assessment: a) { path = []; claim = Claim() }
                     }
                 }
         }

@@ -35,8 +35,6 @@ struct Assessment: Codable, Hashable {
     var recommend_filing: Bool
 }
 
-struct Payout: Codable { var refund: Int; var fee: Int; var you_get: Int }
-
 // Fields from /extract are all optional: the model leaves unreadable ones out.
 struct TicketFields: Codable {
     var issuer_type, issuer_name, ticket_number, plate, date, time, location, reason_on_ticket: String?

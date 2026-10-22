@@ -92,5 +92,5 @@ CATEGORY_HINTS = {
     "Formalitet og gyldighedsbetingelser": "wrong plate/date/location on the fine, no photo, deadlines",
 }
 
-# Success fee charged on a won case, AirHelp-style "no win, no fee".
+# Legacy: the iOS app's payout screen still shows a fee; the project is free now (see app.py). Remove with it.
 SUCCESS_FEE = 0.30

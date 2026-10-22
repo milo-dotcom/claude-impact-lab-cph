@@ -17,7 +17,7 @@ struct VerdictView: View {
                 }.frame(maxWidth: .infinity).padding(.vertical)
                 if !assessment.recommend_filing {
                     // The honesty moment: we say no when the rulebook says no.
-                    Label("We would not take this case. You can still appeal yourself.", systemImage: "hand.raised")
+                    Label("We would not recommend appealing. You can still try — the letter is yours.", systemImage: "hand.raised")
                         .foregroundStyle(.red)
                 }
             }

@@ -7,7 +7,7 @@ enum API {
     struct ServerError: LocalizedError { let message: String; var errorDescription: String? { message } }
 
     private static func send<T: Decodable>(_ path: String, body: Encodable? = nil) async throws -> T {
-        var req = URLRequest(url: URL(string: path, relativeTo: base)!)  // appendingPathComponent would escape "?" in payout?amount=
+        var req = URLRequest(url: URL(string: path, relativeTo: base)!)
         if let body {
             req.httpMethod = "POST"
             req.httpBody = try JSONEncoder().encode(AnyEncodable(body))
@@ -31,12 +31,6 @@ enum API {
     static func extract(_ image: Data, mediaType: String) async throws -> TicketFields {
         struct Req: Encodable { let image_base64: String; let media_type: String }
         return try await send("extract", body: Req(image_base64: image.base64EncodedString(), media_type: mediaType))
-    }
-    static func payout(_ amount: Int) async throws -> Payout { try await send("payout?amount=\(amount)") }
-    static func submit(_ c: Claim, _ a: Assessment) async throws {
-        struct Req: Encodable { let claim: Claim; let assessment: Assessment }
-        struct Res: Decodable { let id: String }
-        let _: Res = try await send("claims", body: Req(claim: c, assessment: a))
     }
 }
 
