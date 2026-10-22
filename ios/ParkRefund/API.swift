@@ -7,7 +7,7 @@ enum API {
     struct ServerError: LocalizedError { let message: String; var errorDescription: String? { message } }
 
     private static func send<T: Decodable>(_ path: String, body: Encodable? = nil) async throws -> T {
-        var req = URLRequest(url: base.appendingPathComponent(path))
+        var req = URLRequest(url: URL(string: path, relativeTo: base)!)  // appendingPathComponent would escape "?" in payout?amount=
         if let body {
             req.httpMethod = "POST"
             req.httpBody = try JSONEncoder().encode(AnyEncodable(body))
