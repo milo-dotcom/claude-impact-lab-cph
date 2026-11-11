@@ -1,19 +1,25 @@
 """ParkRefund Claude layer: ticket vision extraction, claim assessment, appeal drafting.
 
-Live mode needs ANTHROPIC_API_KEY (via .env). Without it every function runs in deterministic
-MOCK mode so the app can be built and demoed offline.
+Live mode needs ANTHROPIC_API_KEY, ANTHROPIC_PROFILE (a Console login from `ant auth login`) or
+OPENAI_API_KEY via .env, or a Sign in with ChatGPT session (chatgpt.py). Without one, every function
+runs in deterministic MOCK mode so the app can be built and demoed offline.
 """
 import base64
+import collections
 import io
 import json
 import os
+import threading
+import time
 from typing import Literal
 
 import anthropic
+import openai
 from dotenv import load_dotenv
 from PIL import Image, ImageOps
 from pydantic import BaseModel
 
+import chatgpt
 import rules
 
 load_dotenv()
@@ -22,12 +28,56 @@ CLAIM_KEYS = ["issuer_type", "issuer_name", "ticket_number", "plate", "date", "t
               "location", "amount_dkk", "reason_on_ticket", "driver_story", "evidence"]
 
 
+# Server credentials (.env keys, or one ChatGPT sign-in for a whole api.py) bill the operator for every
+# visitor. guard_server_credentials() switches them off when the server is reachable from other machines.
+SERVER_KEYS = True
+SHARED_CALL_LIMIT = None  # max shared-credential calls per hour for the whole process; None = no cap
+LOOPBACK = ("127.0.0.1", "localhost", "::1")
+_shared_calls = collections.deque()
+_shared_lock = threading.Lock()
+
+
+def guard_server_credentials(local: bool) -> bool:
+    """Call at startup with whether the server only listens on this machine. Off this machine, server
+    credentials are used only with PARKREFUND_SHARE_SERVER_KEY=1, and then at most
+    PARKREFUND_SHARED_CALLS_PER_HOUR calls an hour (default 30). Returns whether they may be used."""
+    global SERVER_KEYS, SHARED_CALL_LIMIT
+    SERVER_KEYS = local or os.getenv("PARKREFUND_SHARE_SERVER_KEY") == "1"
+    SHARED_CALL_LIMIT = None if local else int(os.getenv("PARKREFUND_SHARED_CALLS_PER_HOUR") or 30)
+    return SERVER_KEYS
+
+
+def server_key_present() -> bool:
+    return bool(os.getenv("ANTHROPIC_API_KEY") or os.getenv("ANTHROPIC_PROFILE") or os.getenv("OPENAI_API_KEY"))
+
+
+def _spend_shared_call() -> None:
+    """Count one call on a shared credential; refuse once the hourly cap is used up."""
+    with _shared_lock:
+        now = time.monotonic()
+        while _shared_calls and now - _shared_calls[0] > 3600:
+            _shared_calls.popleft()
+        if len(_shared_calls) >= SHARED_CALL_LIMIT:
+            raise RuntimeError(f"This shared ParkRefund has used its {SHARED_CALL_LIMIT} AI requests for this hour. "
+                               "Try again later, or run ParkRefund on your own computer with your own plan or key.")
+        _shared_calls.append(now)
+
+
+def _claude() -> bool:
+    return SERVER_KEYS and bool(os.getenv("ANTHROPIC_API_KEY") or os.getenv("ANTHROPIC_PROFILE"))
+
+
+def _openai() -> bool:
+    return SERVER_KEYS and bool(os.getenv("OPENAI_API_KEY")) and not _claude()  # Claude wins when both are set
+
+
 def is_live() -> bool:
-    return bool(os.getenv("ANTHROPIC_API_KEY"))
+    return chatgpt.signed_in() or _claude() or _openai()
 
 
 def _model() -> str:
-    return os.getenv("PARKREFUND_MODEL", "claude-sonnet-5-5")
+    default = chatgpt.model() if chatgpt.signed_in() else "gpt-6.1-sol" if _openai() else "claude-sonnet-5-5"
+    return os.getenv("PARKREFUND_MODEL", default)
 
 
 # ---------------------------------------------------------------- schemas
@@ -63,28 +113,71 @@ class Assessment(BaseModel):
 
 
 # ---------------------------------------------------------------- API helpers
-def _client():
-    return anthropic.Anthropic()
-
-
-def _call(fn, **kwargs):
+def ask(system: str, content, schema=None):
+    """One model call on whichever provider is signed in. content: a str or Anthropic-style blocks
+    (see image_block). Returns a parsed `schema` instance (or None), or the reply text when schema is None."""
+    own_plan = chatgpt.signed_in() and not chatgpt.shared()  # this visitor's own ChatGPT sign-in: never capped
+    if SHARED_CALL_LIMIT is not None and not own_plan:
+        _spend_shared_call()
     try:
-        resp = fn(**kwargs)
-    except anthropic.APIConnectionError as e:
-        raise RuntimeError("Could not reach the Claude API. Check your connection.") from e
-    except anthropic.RateLimitError as e:
-        raise RuntimeError("Claude API rate limit hit. Wait a moment and retry.") from e
-    except anthropic.BadRequestError as e:  # retrying the same input fails the same way
-        raise RuntimeError("Claude could not process this request (400). Try a different photo.") from e
-    except anthropic.APIStatusError as e:
-        raise RuntimeError(f"Claude API error ({e.status_code}). Please retry.") from e
-    if resp.stop_reason == "refusal":
-        raise RuntimeError("Model declined this request")
-    return resp
-
-
-def _text(resp) -> str:
-    return "".join(b.text for b in resp.content if getattr(b, "type", None) == "text").strip()
+        if chatgpt.signed_in():  # ChatGPT plan: public Responses API, streamed, nothing stored (OpenAI's rules)
+            if isinstance(content, list):
+                content = [{"type": "input_image", "image_url": f"data:{b['source']['media_type']};base64,{b['source']['data']}"}
+                           if b["type"] == "image" else {"type": "input_text", "text": b["text"]} for b in content]
+            client = openai.OpenAI(api_key=chatgpt.token(), base_url=chatgpt.RESOURCE, max_retries=0)
+            # Plan models reason before answering, and that counts against max_output_tokens.
+            with client.responses.stream(model=_model(), instructions=system, input=[{"role": "user", "content": content}],
+                                         max_output_tokens=16000, store=False, **({"text_format": schema} if schema else {})) as s:
+                deltas = []  # with store=False the final event can carry an empty output list: keep the streamed text
+                for ev in s:
+                    if ev.type == "response.output_text.delta":
+                        deltas.append(ev.delta)
+                    elif ev.type == "response.failed":
+                        code = ev.response.error.code if ev.response.error else "unknown"
+                        raise RuntimeError(f"ChatGPT could not complete this request ({code}). "
+                                           "If it is a usage limit, see chatgpt.com/settings/usage.")
+                final = s.get_final_response()
+            if final.status == "incomplete":  # the SDK treats this as done, but there is no (full) answer
+                reason = final.incomplete_details.reason if final.incomplete_details else "unknown"
+                raise RuntimeError(f"ChatGPT stopped before finishing the answer ({reason}).")
+            text = final.output_text or "".join(deltas)
+            if not schema:
+                return text.strip()
+            return final.output_parsed or (schema.model_validate_json(text) if text else None)
+        if _openai():
+            if isinstance(content, list):
+                content = [{"type": "image_url", "image_url": {"url": f"data:{b['source']['media_type']};base64,{b['source']['data']}"}}
+                           if b["type"] == "image" else b for b in content]
+            resp = openai.OpenAI().chat.completions.parse(
+                model=_model(), max_completion_tokens=4000,
+                messages=[{"role": "system", "content": system}, {"role": "user", "content": content}],
+                **({"response_format": schema} if schema else {}))
+            msg = resp.choices[0].message
+            if msg.refusal:
+                raise RuntimeError("Model declined this request")
+            return msg.parsed if schema else (msg.content or "").strip()
+        kw = dict(model=_model(), max_tokens=4000, messages=[{"role": "user", "content": content}],
+                  system=[{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}])
+        api = anthropic.Anthropic().messages
+        resp = api.parse(output_format=schema, **kw) if schema else api.create(**kw)
+        if resp.stop_reason == "refusal":
+            raise RuntimeError("Model declined this request")
+        return resp.parsed_output if schema else "".join(b.text for b in resp.content if b.type == "text").strip()
+    except (anthropic.APIConnectionError, openai.APIConnectionError) as e:
+        raise RuntimeError("Could not reach the model API. Check your connection.") from e
+    except (anthropic.RateLimitError, openai.RateLimitError) as e:
+        raise RuntimeError("Model API rate limit hit. Wait a moment and retry.") from e
+    except (anthropic.BadRequestError, openai.BadRequestError) as e:  # retrying the same input fails the same way
+        raise RuntimeError("The model could not process this request (400). Try a different photo.") from e
+    except (anthropic.AuthenticationError, openai.AuthenticationError) as e:
+        raise RuntimeError("Not authorised (401): the key is wrong or revoked, or the login expired. Fix .env or log in again.") from e
+    except (anthropic.APIStatusError, openai.APIStatusError) as e:
+        raise RuntimeError(f"Model API error ({e.status_code}). Please retry.") from e
+    except openai.APIError as e:  # an error event inside a 200 stream: what ChatGPT sends when plan sharing is off
+        if chatgpt.signed_in():
+            raise RuntimeError("ChatGPT stopped this request: plan sharing for ParkRefund is off, or its usage limit "
+                               "was reached. Check chatgpt.com/settings/usage.") from e
+        raise RuntimeError(f"Model API error: {e.message}") from e
 
 
 MAX_IMAGE_SIDE = 1568  # Claude scales larger images down anyway; this keeps phone photos under the 5 MB API limit
@@ -125,9 +218,7 @@ def extract_ticket(image_bytes: bytes, media_type: str) -> dict:
               "parkeringsafgift and 'private' for a private operator's kontrolafgift. date is YYYY-MM-DD, "
               "time is HH:MM (24h), amount_dkk is an integer. Never guess or invent values.")
     content = [image_block(image_bytes), {"type": "text", "text": "Extract the ticket fields."}]
-    resp = _call(_client().messages.parse, model=_model(), max_tokens=4000, system=system,
-                 messages=[{"role": "user", "content": content}], output_format=TicketFields)
-    parsed = resp.parsed_output
+    parsed = ask(system, content, TicketFields)
     if parsed is None:
         return {}
     return {k: v for k, v in parsed.model_dump().items() if v not in (None, "")}
@@ -136,7 +227,7 @@ def extract_ticket(image_bytes: bytes, media_type: str) -> dict:
 # ---------------------------------------------------------------- assess_claim
 def _assess_system() -> str:
     hints = "\n".join(f"- {c}: {rules.CATEGORY_HINTS.get(c, '')}" for c in rules.CATEGORIES)
-    return f"""You are a Danish parking-fine appeals specialist at a no-win-no-fee company (we take 30% only if the refund is won). You triage claims honestly: customers trust us because we tell them when a case is weak.
+    return f"""You are a Danish parking-fine appeals specialist at a free, open-source public-interest service (no fee, no cut of the refund). You triage claims honestly: people trust it because it tells them when a case is weak.
 
 RULEBOOK (ground truth for this prototype):
 {rules.RULES}
@@ -157,11 +248,8 @@ Instructions:
 def assess_claim(claim: dict) -> dict:
     if not is_live():
         return _mock_assess(claim)
-    system = [{"type": "text", "text": _assess_system(), "cache_control": {"type": "ephemeral"}}]
     user = "Assess this claim:\n" + json.dumps(claim, ensure_ascii=False, indent=2)
-    resp = _call(_client().messages.parse, model=_model(), max_tokens=4000, system=system,
-                 messages=[{"role": "user", "content": user}], output_format=Assessment)
-    out = resp.parsed_output
+    out = ask(_assess_system(), user, Assessment)
     if out is None:
         raise RuntimeError("Model returned no structured assessment")
     d = out.model_dump()
@@ -281,7 +369,7 @@ def _mock_assess(claim: dict) -> dict:
     top = winning[0]["title"].lower() if winning else "no ground that usually wins"
     summary = (f"This looks like {label} case with about {prob}% chance of success"
                + (f" for a {amount} DKK fine" if amount else "") + f". The main point is: {top}. "
-               + ("We recommend filing." if recommend else "We would not take this case, as the rulebook does not support it."))
+               + ("We recommend appealing." if recommend else "We would not recommend appealing, as the rulebook does not support it."))
     return {"success_probability": prob, "verdict": verdict, "summary": summary, "grounds": grounds,
             "weaknesses": weaknesses, "evidence_to_collect": evid, "route": route,
             "deadline_note": deadline, "recommend_filing": recommend}
@@ -303,9 +391,7 @@ def draft_appeal(claim: dict, assessment: dict, language: str = "da") -> str:
               "Never invent facts the driver did not give. Output only the letter.")
     user = ("Claim:\n" + json.dumps(claim, ensure_ascii=False, indent=2) +
             "\n\nAssessment:\n" + json.dumps(assessment, ensure_ascii=False, indent=2))
-    resp = _call(_client().messages.create, model=_model(), max_tokens=3000, system=system,
-                 messages=[{"role": "user", "content": user}])
-    return _text(resp)
+    return ask(system, user)
 
 
 def _mock_letter(claim, assessment, language):

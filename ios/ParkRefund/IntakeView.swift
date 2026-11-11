@@ -15,7 +15,7 @@ struct IntakeView: View {
     var body: some View {
         Form {
             Section {
-                Text("No win, no fee. Upload the ticket, tell us what happened, get an honest verdict.")
+                Text("Free and open source. Upload the ticket, tell us what happened, get an honest verdict and a letter you send yourself.")
                     .font(.subheadline).foregroundStyle(.secondary)
                 PhotosPicker(selection: $photo, matching: .images) {
                     Label(busy ? "Reading ticket…" : "Photograph / pick the ticket", systemImage: "camera.viewfinder")

@@ -3,9 +3,11 @@
 Stdlib only (CLAUDE.md: no new frameworks). Wraps claims.py; mock mode when no key.
     .venv/bin/python api.py                  # http://localhost:8000, this Mac only
     HOST=0.0.0.0 .venv/bin/python api.py     # also reachable from a phone on the same Wi-Fi (no auth!)
+Off 127.0.0.1 the .env key and --chatgpt are refused unless PARKREFUND_SHARE_SERVER_KEY=1 (then capped per hour).
 """
 import json
 import os
+import sys
 import uuid
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -122,5 +124,12 @@ class Handler(BaseHTTPRequestHandler):
 if __name__ == "__main__":
     port = int(os.getenv("PORT", "8000"))
     host = os.getenv("HOST", "127.0.0.1")  # no auth, so only open to the network on purpose
+    shared_ok = claims.guard_server_credentials(host in claims.LOOPBACK)  # no .env key for strangers on the Wi-Fi
+    if "--chatgpt" in sys.argv:  # run on the operator's ChatGPT plan; signs out when the server stops
+        if not shared_ok:
+            sys.exit(f"Refusing --chatgpt on HOST={host}: everyone who can reach this server would use your ChatGPT plan. "
+                     "Use HOST=127.0.0.1, or set PARKREFUND_SHARE_SERVER_KEY=1 to share it (capped per hour).")
+        import chatgpt
+        chatgpt.login()
     print(f"ParkRefund API on http://{host}:{port}  mode={'LIVE' if claims.is_live() else 'MOCK'}  ops: /admin")
     ThreadingHTTPServer((host, port), Handler).serve_forever()

@@ -4,3 +4,6 @@ __pycache__/
 *.pyc
 .DS_Store
 data/claims_store.json
+media/
+ios/ParkRefund.xcodeproj/
+ios/ParkRefund/Info.plist

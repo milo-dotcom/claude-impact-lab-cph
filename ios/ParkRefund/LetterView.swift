@@ -3,7 +3,7 @@ import SwiftUI
 struct LetterView: View {
     let claim: Claim
     let assessment: Assessment
-    let onNext: () -> Void
+    let onDone: () -> Void
 
     @State private var language = "da"
     @State private var letter = ""
@@ -20,9 +20,11 @@ struct LetterView: View {
                         .frame(maxWidth: .infinity, alignment: .leading).padding() }
             }
             ErrorBanner(message: error)
+            Text("Read it, sign it, send it yourself. Free and open source — no fee, no cut of your refund.")
+                .font(.footnote).foregroundStyle(.secondary).multilineTextAlignment(.center).padding(.horizontal)
             HStack {
                 ShareLink(item: letter) { Label("Share", systemImage: "square.and.arrow.up") }.disabled(letter.isEmpty)
-                PrimaryButton(title: "Send to ParkRefund", busy: busy, action: submit).disabled(letter.isEmpty)
+                PrimaryButton(title: "Done", action: onDone)
             }.padding(.horizontal)
         }
         .navigationTitle("Your appeal")
@@ -33,14 +35,5 @@ struct LetterView: View {
         busy = true; defer { busy = false }
         do { letter = try await API.draft(claim, assessment, lang: language); error = nil }
         catch { self.error = error.localizedDescription }
-    }
-
-    // Puts the case in the ops queue (api.py /admin). Model drafts; a human files.
-    private func submit() {
-        Task {
-            busy = true; defer { busy = false }
-            do { try await API.submit(claim, assessment); onNext() }
-            catch { self.error = error.localizedDescription }
-        }
     }
 }
