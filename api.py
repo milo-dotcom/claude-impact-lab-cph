@@ -1,7 +1,8 @@
 """ParkRefund HTTP API for the iOS app, plus a tiny ops page at /admin.
 
 Stdlib only (CLAUDE.md: no new frameworks). Wraps claims.py; mock mode when no key.
-    .venv/bin/python api.py            # http://localhost:8000
+    .venv/bin/python api.py                  # http://localhost:8000, this Mac only
+    HOST=0.0.0.0 .venv/bin/python api.py     # also reachable from a phone on the same Wi-Fi (no auth!)
 """
 import json
 import os
@@ -33,6 +34,8 @@ td,th{border-bottom:1px solid #ddd;padding:6px 8px;text-align:left;vertical-alig
 <p>Submissions from the iOS app. Model recommends; a human files. Review band = 40–60 %.</p>
 <table><thead><tr><th>When<th>Ticket<th>Issuer<th>DKK<th>Odds<th>Top ground<th>Status</thead><tbody id=rows></tbody></table>
 <script>
+// Claims and assessments come from POST /claims, so every value is escaped before it touches innerHTML.
+const e=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
 async function load(){
  const r=await fetch('/claims');const d=await r.json();
  document.getElementById('mode').textContent=d.live?'(live)':'(mock)';
@@ -40,9 +43,9 @@ async function load(){
   const a=x.assessment||{},c=x.claim||{},g=(a.grounds||[])[0];
   const opts=__STATUSES__.map(s=>`<option ${s===x.status?'selected':''}>${s}</option>`).join('');
   const band=a.success_probability>=40&&a.success_probability<=60?' ⚠︎ review':'';
-  return `<tr><td>${x.created.slice(0,16).replace('T',' ')}<td>${c.ticket_number||''}<td>${c.issuer_name||''}<td>${c.amount_dkk||''}
-  <td class=${a.verdict}>${a.success_probability??''}% ${a.verdict||''}${band}<td>${g?g.title:''}
-  <td><select onchange="setStatus('${x.id}',this.value)">${opts}</select></tr>`}).join('');
+  return `<tr><td>${e(x.created.slice(0,16).replace('T',' '))}<td>${e(c.ticket_number)}<td>${e(c.issuer_name)}<td>${e(c.amount_dkk)}
+  <td class="${e(a.verdict)}">${e(a.success_probability)}% ${e(a.verdict)}${band}<td>${e(g&&g.title)}
+  <td><select onchange="setStatus('${e(x.id)}',this.value)">${opts}</select></tr>`}).join('');
 }
 async function setStatus(id,s){await fetch('/claims/'+id+'/status',{method:'POST',body:JSON.stringify({status:s})});load();}
 load();
@@ -118,5 +121,6 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", "8000"))
-    print(f"ParkRefund API on http://localhost:{port}  mode={'LIVE' if claims.is_live() else 'MOCK'}  ops: /admin")
-    ThreadingHTTPServer(("0.0.0.0", port), Handler).serve_forever()
+    host = os.getenv("HOST", "127.0.0.1")  # no auth, so only open to the network on purpose
+    print(f"ParkRefund API on http://{host}:{port}  mode={'LIVE' if claims.is_live() else 'MOCK'}  ops: /admin")
+    ThreadingHTTPServer((host, port), Handler).serve_forever()

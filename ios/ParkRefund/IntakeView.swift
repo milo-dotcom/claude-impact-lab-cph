@@ -1,5 +1,6 @@
 import SwiftUI
 import PhotosUI
+import UIKit
 
 struct IntakeView: View {
     @Binding var claim: Claim
@@ -63,7 +64,11 @@ struct IntakeView: View {
         guard let item, let data = try? await item.loadTransferable(type: Data.self) else { return }
         busy = true; defer { busy = false }
         do {
-            let f = try await API.extract(data, mediaType: "image/jpeg")
+            // iPhone photos are HEIC, which the API rejects: re-encode as the JPEG we claim to send.
+            guard let jpeg = UIImage(data: data)?.jpegData(compressionQuality: 0.7) else {
+                error = "Could not read this photo."; return
+            }
+            let f = try await API.extract(jpeg, mediaType: "image/jpeg")
             // Only overwrite what the model actually read.
             if let v = f.issuer_type { claim.issuer_type = v }
             if let v = f.issuer_name { claim.issuer_name = v }

@@ -27,6 +27,11 @@ PHOTO_TYPES = ["jpg", "jpeg", "png", "webp"]
 MAX_EVIDENCE_PHOTOS = 5
 MODEL_NAME = os.environ.get("PARKREFUND_MODEL", "claude-sonnet-5-5")
 SAMPLE_CASES_PATH = Path(__file__).parent / "data" / "sample_cases.json"
+NEXT_STEP = {  # the one thing to do next, shown right under the verdict badge
+    "strong": "Next: send the letter below.",
+    "medium": "Next: get the evidence listed below, then re-check.",
+    "weak": "Next: pay the fine — appealing is unlikely to work.",
+}
 VERDICT_STYLE = {  # colour, stamp text
     "strong": ("#1B8A5A", "Strong case"),
     "medium": ("#C77D00", "Borderline"),
@@ -136,6 +141,8 @@ html, body, .stApp, [data-testid="stSidebar"] { font-family: Inter, "Source Sans
 .pr-card p { margin: 6px 0 0; color: #2B3A55; }
 .pr-list { margin: 4px 0 0; padding-left: 18px; color: #2B3A55; }
 .pr-list li { margin: 4px 0; }
+.pr-hero .pr-lead { font-size: 1.2rem; font-weight: 700; color: #fff; margin: 18px 0 0; }
+.pr-next { font-size: 1.05rem; font-weight: 800; color: var(--ink); margin: 10px 0 2px; }
 .pr-h3 { font-size: .74rem; letter-spacing: 1.6px; text-transform: uppercase; color: var(--muted); font-weight: 800; margin: 18px 0 6px; }
 
 .pr-paper { background: var(--paper); border: 1px solid #EADFBF; border-radius: 6px; padding: 34px 38px; font-family: "Source Serif 4", Georgia, serif;
@@ -229,6 +236,10 @@ def clear_results() -> None:
 
 def init_state() -> None:
     if st.session_state.get("booted"):
+        # Streamlit drops widget keys while another page (Ops dashboard) is shown: restore the form.
+        saved = st.session_state.get("saved_claim", {})
+        for k in claims.CLAIM_KEYS:
+            st.session_state.setdefault(field(k), saved.get(k, [] if k == "evidence" else 0 if k == "amount_dkk" else ""))
         return
     st.session_state.booted = True
     for k in claims.CLAIM_KEYS:
@@ -258,6 +269,7 @@ def normalize_fields() -> None:
               "driver_story"):
         v = st.session_state[field(k)]
         st.session_state[field(k)] = "" if v is None else str(v)
+    st.session_state.saved_claim = {k: st.session_state[field(k)] for k in claims.CLAIM_KEYS}
 
 
 def run_assessment() -> str | None:
@@ -340,6 +352,7 @@ button, input, textarea, label, [data-testid="stWidgetLabel"], [data-testid="stC
 .pr-eyebrow { color: var(--gold); }
 .pr-hero .tag { color: var(--ink); opacity: 1; } .pr-hero .tag b { color: var(--navy); }
 .pr-hero .da { color: var(--muted); opacity: 1; }
+.pr-hero .pr-lead { color: var(--ink); }
 .pr-cta a { background: var(--navy); color: #fff !important; border-color: var(--navy); }
 .pr-cta a.ghost { background: transparent; color: var(--navy) !important; border-color: var(--navy); }
 .pr-trust { color: var(--muted); opacity: 1; } .pr-trust span::before { color: var(--green); }
@@ -369,8 +382,8 @@ with st.sidebar:
     if not live:
         st.caption("No ANTHROPIC_API_KEY — deterministic demo output from claims.py / evidence.py.")
     st.divider()
+    st.markdown("**Prototype — not legal advice. All demo data is synthetic.**")
     st.caption("The model drafts and recommends; a human files.")
-    st.caption("Synthetic demo data. ParkRefund is not a law firm — not legal advice.")
 
 # Hero: lead with the outcome, then the proof (a slip getting scanned, cancelled, refunded)
 st.markdown(
@@ -385,7 +398,8 @@ st.markdown(
     "</div><div class='pr-slipwrap'><div class='pr-slip once'>" + SLIP_HTML + "</div></div></div>"
     "<div class='pr-stats'><div class='pr-stat'><b>12,480</b><span>fines fought</span></div>"
     "<div class='pr-stat'><b>71 %</b><span>won on appeal</span></div>"
-    "<div class='pr-stat'><b>6,214,350 DKK</b><span>back in drivers' pockets</span></div></div></div>",
+    "<div class='pr-stat'><b>6.2 M DKK</b><span>back in drivers' pockets</span></div></div>"
+    "<p class='pr-lead'>Take a photo of the fine. 60 seconds to an honest answer.</p></div>",
     unsafe_allow_html=True)
 st.caption("Demo numbers — synthetic data.")
 
@@ -418,6 +432,7 @@ elif upload is not None and upload.file_id != st.session_state.last_upload_id:
     with st.spinner("Reading your ticket… (about 10 s)"):
         ingest_image(upload.getvalue(), upload.type or "image/jpeg", "ticket photo")
 with right:
+    st.markdown("**No ticket handy? Pick an example →**")
     st.selectbox("…or pick a sample case", SAMPLE_LABELS, key="sample_pick", index=None,
                  placeholder="Choose a case…", on_change=on_pick_sample)
 if st.session_state.notice:
@@ -494,6 +509,7 @@ if a:
     prob = max(0, min(100, int(a.get("success_probability", 0))))
     verdict = str(a.get("verdict", "weak")).lower()
     colour, stamp = VERDICT_STYLE.get(verdict, ("#666", verdict))
+    next_step = NEXT_STEP.get(verdict, NEXT_STEP["medium"])
     take = ("<div class='pr-take yes'>We'd take this case. Below is what carries it, and what would make it stronger.</div>"
             if a.get("recommend_filing") else
             "<div class='pr-take no'>We wouldn't take this case — here's why.<small>No fee, no filing from us. "
@@ -501,6 +517,7 @@ if a:
     st.markdown(
         f"<div class='pr-verdict' style='--c:{colour}'><div class='lbl'>Chance of winning</div>"
         f"<div class='top'><div class='num'>{prob} %</div><div class='pr-stamp' data-verdict='{esc(verdict)}'>{esc(stamp)}</div></div>"
+        f"<div class='pr-next'>{esc(next_step)}</div>"
         f"<div class='pr-bar'><i style='--p:{prob}%'></i></div>{take}"
         f"<p class='pr-summary'>{esc(a.get('summary', ''))}</p></div>", unsafe_allow_html=True)
 

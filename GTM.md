@@ -2,6 +2,25 @@
 
 *Hackathon plan, 21 Oct 2026. Numbers are targets and assumptions, not data.*
 
+## The 30-day impact plan — three answers
+
+**01 · A named owner.** JC (@spontain112) takes it forward after tonight: owns the repo, the
+live URL, and the first ten cases. milo-dotcom stays on data (nævn decisions, WFS signage).
+
+**02 · The first real-world test.** Ten people in Copenhagen who got a private kontrolafgift in the
+last 30 days — friends, colleagues, one Facebook parking group. They upload the real ticket, get
+the verdict and the letter, and send it themselves. We handle nothing yet; we watch. What we want
+to learn, in order: (1) does a human handler agree with the model's verdict on each case, (2) do
+people actually send the letter when we say "strong" and *not* send it when we say "weak",
+(3) what the operators answer within three weeks. Success = 10 verdicts reviewed, 5 letters sent,
+and at least one refund we can show.
+
+**03 · The support we need.** Two hours of a Danish lawyer on `rules.py` (the rulebook is a
+hackathon approximation). One private operator or kommune parkeringskontor willing to be a
+pilot counterpart instead of an adversary. Introductions to Parkeringsklagenævnet for the
+decision corpus beyond the 100-per-query cap. API credits for ~500 live assessments. And one
+part-time case handler for weeks 3–4, when the first operator answers come back.
+
 ## The bet
 
 One city, one ticket type, one channel. **Copenhagen, private operators' kontrolafgifter, acquired at

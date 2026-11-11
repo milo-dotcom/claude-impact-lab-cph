@@ -9,7 +9,6 @@ plausible MOCK result so the UI works offline. Contract (issue #4):
                    "strength": "strong"|"medium"|"weak"}],
      "signage_visible": bool | None, "summary": str, "suggested_additions_to_story": str}
 """
-import base64
 import json
 import os
 from typing import Literal
@@ -17,6 +16,8 @@ from typing import Literal
 import anthropic
 from dotenv import load_dotenv
 from pydantic import BaseModel
+
+import claims
 
 load_dotenv()
 
@@ -64,6 +65,8 @@ def _call(fn, **kwargs):
         raise RuntimeError("Could not reach the Claude API. Check your connection.") from e
     except anthropic.RateLimitError as e:
         raise RuntimeError("Claude API rate limit hit. Wait a moment and retry.") from e
+    except anthropic.BadRequestError as e:  # retrying the same input fails the same way
+        raise RuntimeError("Claude could not process these photos (400). Try different photos.") from e
     except anthropic.APIStatusError as e:
         raise RuntimeError(f"Claude API error ({e.status_code}). Please retry.") from e
     if resp.stop_reason == "refusal":
@@ -81,10 +84,9 @@ def check_evidence(images: list[tuple[bytes, str]], claim: dict) -> dict:
         return _mock_check(images, claim)
 
     content = []
-    for i, (data, media_type) in enumerate(images):
+    for i, (data, _media_type) in enumerate(images):
         content.append({"type": "text", "text": f"Photo {i + 1} (photo_index {i}):"})
-        content.append({"type": "image", "source": {"type": "base64", "media_type": media_type,
-                                                      "data": base64.standard_b64encode(data).decode()}})
+        content.append(claims.image_block(data))
     context = {k: claim.get(k) for k in ("issuer_type", "issuer_name", "reason_on_ticket", "location", "driver_story")}
     content.append({"type": "text", "text": "Claim context:\n" + json.dumps(context, ensure_ascii=False, indent=2)
                     + "\n\nAssess the photos as evidence for this claim."})

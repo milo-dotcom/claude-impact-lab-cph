@@ -4,12 +4,14 @@ Live mode needs ANTHROPIC_API_KEY (via .env). Without it every function runs in 
 MOCK mode so the app can be built and demoed offline.
 """
 import base64
+import io
 import json
 import os
 from typing import Literal
 
 import anthropic
 from dotenv import load_dotenv
+from PIL import Image, ImageOps
 from pydantic import BaseModel
 
 import rules
@@ -72,6 +74,8 @@ def _call(fn, **kwargs):
         raise RuntimeError("Could not reach the Claude API. Check your connection.") from e
     except anthropic.RateLimitError as e:
         raise RuntimeError("Claude API rate limit hit. Wait a moment and retry.") from e
+    except anthropic.BadRequestError as e:  # retrying the same input fails the same way
+        raise RuntimeError("Claude could not process this request (400). Try a different photo.") from e
     except anthropic.APIStatusError as e:
         raise RuntimeError(f"Claude API error ({e.status_code}). Please retry.") from e
     if resp.stop_reason == "refusal":
@@ -81,6 +85,22 @@ def _call(fn, **kwargs):
 
 def _text(resp) -> str:
     return "".join(b.text for b in resp.content if getattr(b, "type", None) == "text").strip()
+
+
+MAX_IMAGE_SIDE = 1568  # Claude scales larger images down anyway; this keeps phone photos under the 5 MB API limit
+
+
+def image_block(image_bytes: bytes) -> dict:
+    """Any uploaded photo → upright, downscaled JPEG content block the API accepts."""
+    try:
+        img = ImageOps.exif_transpose(Image.open(io.BytesIO(image_bytes))).convert("RGB")
+    except OSError as e:
+        raise ValueError("Could not open this image. Use a JPEG, PNG or WebP photo.") from e
+    img.thumbnail((MAX_IMAGE_SIDE, MAX_IMAGE_SIDE))
+    out = io.BytesIO()
+    img.save(out, "JPEG", quality=85)
+    return {"type": "image", "source": {"type": "base64", "media_type": "image/jpeg",
+                                        "data": base64.standard_b64encode(out.getvalue()).decode()}}
 
 
 # ---------------------------------------------------------------- extract_ticket
@@ -104,11 +124,7 @@ def extract_ticket(image_bytes: bytes, media_type: str) -> dict:
               "clearly legible; leave a field null if unsure. issuer_type is 'public' for a kommune/police "
               "parkeringsafgift and 'private' for a private operator's kontrolafgift. date is YYYY-MM-DD, "
               "time is HH:MM (24h), amount_dkk is an integer. Never guess or invent values.")
-    content = [
-        {"type": "image", "source": {"type": "base64", "media_type": media_type,
-                                     "data": base64.standard_b64encode(image_bytes).decode()}},
-        {"type": "text", "text": "Extract the ticket fields."},
-    ]
+    content = [image_block(image_bytes), {"type": "text", "text": "Extract the ticket fields."}]
     resp = _call(_client().messages.parse, model=_model(), max_tokens=4000, system=system,
                  messages=[{"role": "user", "content": content}], output_format=TicketFields)
     parsed = resp.parsed_output
